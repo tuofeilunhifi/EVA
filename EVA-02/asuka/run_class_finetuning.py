@@ -222,13 +222,13 @@ def get_args():
     known_args, _ = parser.parse_known_args()
 
     if known_args.enable_deepspeed:
-        try:
-            import deepspeed
-            parser = deepspeed.add_config_arguments(parser)
-            ds_init = deepspeed.initialize
-        except:
-            print("Please install deepspeed")
-            exit(0)
+        # try:
+        import deepspeed
+        parser = deepspeed.add_config_arguments(parser)
+        ds_init = deepspeed.initialize
+        # except:
+        #     print("Please install deepspeed")
+        #     exit(0)
     else:
         ds_init = None
 
