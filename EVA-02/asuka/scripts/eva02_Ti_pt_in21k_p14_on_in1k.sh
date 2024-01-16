@@ -1,11 +1,11 @@
 export CUDA_VISIBLE_DEVICES=4,5,6,7
-cd /workspace/codebase/EVA/EVA-02/asuka/
+cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/
 
 MODEL_NAME=eva02_tiny_patch14_xattn_fusedLN_SwiGLU_preln_RoPE
 
-PRETRAIN_CKPT=/workspace/models/eva02_Ti_pt_in21k_p14.pt 
+PRETRAIN_CKPT=/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_p14.pt 
 
-OUTPUT_DIR=/workspace/models/eva02_Ti_pt_in21k_p14_on_in1k
+OUTPUT_DIR=/mnt/pfs-guan-ssai/cv/cjy/projects/eva/${MODEL_NAME}
 
 DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k
 

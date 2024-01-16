@@ -1,5 +1,5 @@
 export CUDA_VISIBLE_DEVICES=4,5,6,7
-cd /workspace/codebase/EVA/EVA-02/asuka/
+cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/
 
 MODEL_NAME=eva02_tiny_patch14_xattn_fusedLN_SwiGLU_preln_RoPE
 
@@ -7,7 +7,7 @@ sz=336
 batch_size=64
 crop_pct=1.0
 
-EVAL_CKPT=/workspace/models/eva02_Ti_pt_in21k_ft_in1k_p14.pt
+EVAL_CKPT=/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_ft_in1k_p14.pt
 
 DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k
 
