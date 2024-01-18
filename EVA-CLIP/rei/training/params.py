@@ -451,6 +451,7 @@ def parse_args(args):
         default=100,
         help="Step interval to store embeddings",
     )
+    parser.add_argument('--enable_deepspeed', action='store_true', default=False)
 
     args = parser.parse_args(args)
 

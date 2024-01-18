@@ -8,7 +8,8 @@ import gc
 import numpy as np
 import torch
 import torch.nn as nn
-from torch._six import inf
+# from torch._six import inf
+inf = "inf"
 import torch.nn.functional as F
 import torch.distributed as dist
 
