@@ -49,7 +49,7 @@ arch_dict = {
       "width": "hidden_size",
       "heads": "num_attention_heads",
       "layers": "num_hidden_layers",
-      "layer_attr": "layer",
+      "layer_attr": "layers",
       "token_embeddings_attr": "embeddings"
     },
     "pooler": "mean_pooler",

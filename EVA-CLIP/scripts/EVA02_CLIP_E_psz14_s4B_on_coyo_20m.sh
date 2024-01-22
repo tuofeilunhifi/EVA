@@ -1,17 +1,17 @@
 export CUDA_VISIBLE_DEVICES=4,5,6,7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
-MODEL=EVA02-CLIP-bigE-14-plus
+MODEL=EVA02-CLIP-bigE-14
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
-PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/pytorch_model-00001-of-00002.bin # ckpt is splited into 2 parts. could merge first then load.
+PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-H-14-laion2B-s32B-b79K/snapshots/de081ac0a0ca8dc9d1533eed1ae884bb8ae1404b/pytorch_model.bin # ckpt is splited into 2 parts. could merge first then load.
 PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
-PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
+PRETRAINED_TEXT_MODEL=OpenCLIP-H-14
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
-# PRETRAINED_TEXT=laion2b_s39b_b160k
-# PRETRAINED_VISUAL_MODEL=EVA02-CLIP-bigE-14
-# PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
+# PRETRAINED_TEXT=laion2b_s32b_b79k
+# PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
+# PRETRAINED_TEXT_MODEL=OpenCLIP-H-14
 
 
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
@@ -36,7 +36,7 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --dataset-type="json" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1000 \
+        --batch-size=800 \
         --epochs=100 \
         --lr=5e-4 \
         --visual-lr=4e-4 \

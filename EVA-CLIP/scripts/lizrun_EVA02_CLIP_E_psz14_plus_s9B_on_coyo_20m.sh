@@ -52,8 +52,8 @@ fi
 
 MODEL=EVA02-CLIP-bigE-14-plus
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
-PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/CLIP-ViT-bigG-14-laion2B-39B-b160k-merge.bin # ckpt is splited into 2 parts. could merge first then load.
-PRETRAINED_VISUAL_MODEL=EVA02-CLIP-bigE-14
+PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/pytorch_model-00001-of-00002.bin # ckpt is splited into 2 parts. could merge first then load.
+PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
 PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
@@ -105,7 +105,6 @@ torchrun --nnodes=${WORLD_SIZE} \
         --smoothing=0. \
         --workers=8 \
         --model=${MODEL} \
-        # --name='eva-vit-4b-14-text-bigG-x-lamb-patch_drop-18nodes-b144k-laion2b' \
         --pretrained-image=${PRETRAINED_IMAGE} \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \

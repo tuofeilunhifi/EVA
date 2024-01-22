@@ -14,6 +14,7 @@
         "fusedLN": true
     },
     "text_cfg": {
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-H-14-laion2B-s32B-b79K/snapshots/de081ac0a0ca8dc9d1533eed1ae884bb8ae1404b",
         "context_length": 77,
         "vocab_size": 49408,
         "width": 1024,

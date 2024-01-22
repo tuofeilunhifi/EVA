@@ -199,7 +199,7 @@ def load_pretrained_checkpoint(
         elif text_tag == "clip":
             text_state_dict = load_clip_text_state_dict(text_checkpoint_path, is_openai=True, skip_list=skip_list)
         else:
-            text_state_dict = load_state_dict(visual_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
+            text_state_dict = load_state_dict(text_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
 
         text_incompatible_keys = model.text.load_state_dict(text_state_dict, strict=strict)
         
@@ -225,6 +225,7 @@ def create_model(
         cache_dir: Optional[str] = None,
         skip_list: list  = [],
 ):
+
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
     if isinstance(device, str):
         device = torch.device(device)

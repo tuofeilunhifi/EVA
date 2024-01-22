@@ -83,9 +83,16 @@ class HFTextEncoder(nn.Module):
             pooler_type: str = None,
             proj: str = None,
             pretrained: bool = True,
-            masked_language_modeling: bool = False):
+            masked_language_modeling: bool = False,
+            context_length: int = 77,
+            attn_mask: bool = True):
         super().__init__()
+        # print(model_name_or_path, output_dim, tokenizer_name, config, pooler_type, proj, pretrained, masked_language_modeling)
+        # /mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189 1024 None None mean_pooler mlp True False
+        # exit()
 
+        self.context_length = context_length
+        self.pad_token_id = 0
         self.output_dim = output_dim
 
         # TODO: find better way to get this information
@@ -106,7 +113,9 @@ class HFTextEncoder(nn.Module):
                 self.transformer = create_func(model_args)
                 self.transformer = self.transformer.encoder
             else:
-                self.transformer = create_func(model_args, add_pooling_layer=uses_transformer_pooler)
+                # self.transformer = create_func(model_args, add_pooling_layer=uses_transformer_pooler)
+                self.transformer = create_func(model_args)
+                self.transformer.pooler = None
         else:
             self.config = config
             if masked_language_modeling:
@@ -119,7 +128,8 @@ class HFTextEncoder(nn.Module):
         else:
             self.pooler = _POOLERS[pooler_type]()
 
-        d_model = getattr(self.config, arch_dict[self.config.model_type]["config_names"]["width"])
+        # d_model = getattr(self.config, arch_dict[self.config.model_type]["config_names"]["width"])
+        d_model = getattr(self.config.text_config, arch_dict["bert"]["config_names"]["width"])
         if (d_model == output_dim) and (proj is None): # do we always need a proj?
             self.proj = nn.Identity()
         elif proj == 'linear':
@@ -132,9 +142,14 @@ class HFTextEncoder(nn.Module):
                 nn.Linear(hidden_size, output_dim, bias=False),
             )
 
+        if attn_mask:
+            self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
+        else:
+            self.attn_mask = None
+
         # self.itm_proj = nn.Linear(d_model, 2, bias=False)
         # self.mlm_proj = nn.Linear(d_model, self.config.vocab_size), bias=False)
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        # self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     # def forward_itm(self, x:TensorType, image_embeds:TensorType) -> TensorType:
     #     image_atts = torch.ones(image_embeds.size()[:-1],dtype=torch.long).to(x.device)  
@@ -211,11 +226,20 @@ class HFTextEncoder(nn.Module):
 
 
     def forward(self, x:TensorType) -> TensorType:
-        attn_mask = (x != self.config.pad_token_id).long()
+        # print(x, self.config.pad_token_id, (x != self.config.pad_token_id))
+        attn_mask = (x != self.pad_token_id).long()
         out = self.transformer(input_ids=x, attention_mask=attn_mask)
         pooled_out = self.pooler(out, attn_mask)
 
         return self.proj(pooled_out)
+
+    def build_attention_mask(self):
+        # lazily create causal attention mask, with full attention between the vision tokens
+        # pytorch uses additive attention mask; fill with -inf
+        mask = torch.empty(self.context_length, self.context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # zero out the lower diagonal
+        return mask
 
     def lock(self, unlocked_layers:int=0, freeze_layer_norm:bool=True):
         if not unlocked_layers: # full freezing
@@ -238,10 +262,13 @@ class HFTextEncoder(nn.Module):
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
         self.transformer.gradient_checkpointing_enable()
+        # transformer.text_model
+        del self.transformer.vision_model, self.transformer.visual_projection, self.transformer.text_projection
+        self.transformer = self.transformer.text_model
 
     def get_num_layers(self):
         encoder = self.transformer.encoder if hasattr(self.transformer, 'encoder') else self.transformer
-        layer_list = getattr(encoder, arch_dict[self.config.model_type]["config_names"]["layer_attr"])
+        layer_list = getattr(encoder, arch_dict["bert"]["config_names"]["layer_attr"])
         return len(layer_list)
 
     def init_parameters(self):
