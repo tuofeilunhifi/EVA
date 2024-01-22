@@ -20,6 +20,7 @@ import pandas as pd
 import torch
 import torchvision.datasets as datasets
 import webdataset as wds
+import PIL
 from PIL import Image, TarIO, ImageFile
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, IterableDataset, get_worker_info
 from torch.utils.data.distributed import DistributedSampler
@@ -636,6 +637,7 @@ class JsonDataset(Dataset):
                 # if os.path.exists(item['image']):
                 self.images.append(item['image'])
                 self.captions.append(item['caption'])
+        self.length = len(self.images)
 
         self.transforms = transforms
         logging.debug('Done loading data.')
@@ -646,8 +648,16 @@ class JsonDataset(Dataset):
         return len(self.captions)
 
     def __getitem__(self, idx):
-        images = self.transforms(Image.open(str(self.images[idx])))
-        texts = self.tokenize([str(self.captions[idx])])[0]
+        while True:
+            try:
+                img = Image.open(str(self.images[idx]))
+                images = self.transforms(img)
+                texts = self.tokenize([str(self.captions[idx])])[0]
+                break
+            except PIL.UnidentifiedImageError:
+                logging.info(str(self.images[idx]))
+                idx = random.randint(0, self.length - 1)
+
         return images, texts
 
 def get_json_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):

@@ -51,22 +51,22 @@ fi
 ###############################################################################################################################
 
 MODEL=EVA02-CLIP-bigE-14-plus
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_CLIP_E_psz14_plus_s9B.pt
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
 PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/CLIP-ViT-bigG-14-laion2B-39B-b160k-merge.bin # ckpt is splited into 2 parts. could merge first then load.
-PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
+PRETRAINED_VISUAL_MODEL=EVA02-CLIP-bigE-14
 PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
 # PRETRAINED_TEXT=laion2b_s39b_b160k
-# PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
+# PRETRAINED_VISUAL_MODEL=EVA02-CLIP-bigE-14
 # PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
 
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
-COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/grit_coyo_20m/grit_coyo_20m_all.json
+COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/cjy/data/coyo/grit_coyo_20m_all_2.json
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -82,15 +82,13 @@ torchrun --nnodes=${WORLD_SIZE} \
         --save-frequency 1 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
-        # --wandb-project-name="eva-clip" \
-        # --wandb-notes="eva02_clip_E_14" \
+        --wandb-project-name="eva-clip" \
+        --wandb-notes="eva02_clip_E_14" \
         --train-num-samples 40000000 \
         --dataset-resampled \
         --train-data=${COYO_20M_DATA_PATH} \
         --dataset-type="json" \
         --imagenet-val=${VAL_DATA_PATH} \
-        --csv-img-key="image" \
-        --csv-caption-key="caption" \
         --warmup 2000 \
         --batch-size=1000 \
         --epochs=100 \
@@ -107,7 +105,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --smoothing=0. \
         --workers=8 \
         --model=${MODEL} \
-        --name='eva-vit-4b-14-text-bigG-x-lamb-patch_drop-18nodes-b144k-laion2b' \
+        # --name='eva-vit-4b-14-text-bigG-x-lamb-patch_drop-18nodes-b144k-laion2b' \
         --pretrained-image=${PRETRAINED_IMAGE} \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \

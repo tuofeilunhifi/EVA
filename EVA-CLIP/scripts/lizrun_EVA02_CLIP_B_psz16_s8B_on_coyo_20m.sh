@@ -66,22 +66,27 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
-COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/grit_coyo_20m/grit_coyo_20m_all.json
+COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/cjy/data/coyo/grit_coyo_20m_all_2.json
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
 #        	--nnodes=$WORLD_SIZE --node_rank=$RANK \
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
-torchrun --nproc_per_node=8 --nnodes=1 \
+# torchrun --nproc_per_node=8 --nnodes=1 \
+torchrun --nnodes=${WORLD_SIZE} \
+  --nproc_per_node=8 \
+  --rdzv_id=100 \
+  --rdzv_backend=c10d \
+  --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
         --save-frequency 1 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
-        # --wandb-project-name="eva-clip" \
-        # --wandb-notes="eva02_clip_B_16" \
+        --wandb-project-name="eva-clip" \
+        --wandb-notes="eva02_clip_B_16" \
         --train-num-samples 40000000 \
         --dataset-resampled \
-        --train-data-list=${COYO_20M_DATA_PATH} \
+        --train-data=${COYO_20M_DATA_PATH} \
         --dataset-type="json" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \

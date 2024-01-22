@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=4,5,6,7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
 MODEL=EVA02-CLIP-B-16
@@ -17,19 +17,19 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
-COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/grit_coyo_20m/grit_coyo_20m_all.json
+COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/cjy/data/coyo/grit_coyo_20m_all_2.json
 VAL_DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
 #        	--nnodes=$WORLD_SIZE --node_rank=$RANK \
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
-torchrun --nproc_per_node=8 --nnodes=1 \
+torchrun --nproc_per_node=4 --nnodes=1 \
     training/main.py \
         --save-frequency 1 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
-        # --wandb-project-name="eva-clip" \
-        # --wandb-notes="eva02_clip_B_16" \
+        --wandb-project-name="eva-clip" \
+        --wandb-notes="eva02_clip_B_16" \
         --train-num-samples 40000000 \
         --dataset-resampled \
         --train-data=${COYO_20M_DATA_PATH} \
