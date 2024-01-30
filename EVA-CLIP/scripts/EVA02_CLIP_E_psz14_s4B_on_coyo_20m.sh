@@ -3,7 +3,7 @@ cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
 MODEL=EVA02-CLIP-bigE-14
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
-PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-H-14-laion2B-s32B-b79K/snapshots/de081ac0a0ca8dc9d1533eed1ae884bb8ae1404b/pytorch_model.bin # ckpt is splited into 2 parts. could merge first then load.
+PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-H-14-laion2B-s32B-b79K/snapshots/de081ac0a0ca8dc9d1533eed1ae884bb8ae1404b/open_clip_pytorch_model.bin # ckpt is splited into 2 parts. could merge first then load.
 PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
 PRETRAINED_TEXT_MODEL=OpenCLIP-H-14
 
@@ -25,7 +25,7 @@ VAL_DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k/val
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
 torchrun --nproc_per_node=4 --nnodes=1 \
     training/main.py \
-        --save-frequency 1 \
+        --save-frequency 10 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
         --wandb-project-name="eva-clip" \

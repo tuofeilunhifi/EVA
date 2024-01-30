@@ -37,7 +37,6 @@ def random_seed(seed=42, rank=0):
 
 def main(args):
     args, ds_init = parse_args(args)
-
     if ds_init is not None:
         create_deepspeed_config(args)
 

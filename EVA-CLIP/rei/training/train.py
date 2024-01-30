@@ -6,7 +6,7 @@ import time
 import gc
 
 import numpy as np
-import torch
+import torch, gc
 import torch.nn as nn
 # from torch._six import inf
 inf = "inf"
@@ -17,7 +17,7 @@ try:
     import wandb
 except ImportError:
     wandb = None
-from eva_clip import ClipLoss, get_cast_dtype, get_tokenizer
+from eva_clip import ClipLoss, SPARCLoss, get_cast_dtype, get_tokenizer
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 from .precision import get_autocast
@@ -77,13 +77,16 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     cast_dtype = get_cast_dtype(args.precision)
 
     model.train()
-    loss = ClipLoss(
+    clip_loss_funcation = ClipLoss(
         local_loss=args.local_loss,
         gather_with_grad=args.gather_with_grad,
         cache_labels=True,
         rank=args.rank,
         world_size=args.world_size,
         )
+    
+    # if args.sparc_loss:
+    #     sparc_loss_funcation = SPARCLoss()
 
 
     data['train'].set_epoch(epoch)  # set epoch in process safe manner via sampler or shared_epoch
@@ -93,6 +96,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
     loss_m = AverageMeter()
     loss_clip_m = AverageMeter()
+    # if args.sparc_loss:
+    #     loss_sparc_m = AverageMeter()
     loss_scaler = AverageMeter()
     grad_norm_m = AverageMeter()
     batch_time_m = AverageMeter()
@@ -120,7 +125,13 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
         with autocast():
             image_features, text_features, logit_scale = model(images, texts)
-            total_loss, acc = loss(image_features, text_features, logit_scale)
+            total_loss, acc = clip_loss_funcation(image_features, text_features, logit_scale)
+            # if args.sparc_loss:
+            #     sparc_loss = sparc_loss_funcation(image_features_local, text_features_local, attn_mask, logit_scale)
+            #     total_loss = 1 * clip_loss + 0.5 * sparc_loss
+            #     sparc_loss = sparc_loss.clone().detach()
+            # else:
+            # total_loss = clip_loss
             clip_loss = total_loss.clone().detach()
 
         loss_list = [torch.zeros_like(total_loss) for _ in range(dist.get_world_size())]
@@ -166,6 +177,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             # NOTE loss is coarsely sampled, just master node and per log update
             loss_m.update(total_loss.item(), batch_size)
             loss_clip_m.update(clip_loss.item(), batch_size)
+            # if args.sparc_loss:
+            #     loss_sparc_m.update(sparc_loss.item(), batch_size)
 
             logit_scale_scalar = logit_scale.item()
             if args.enable_deepspeed:
@@ -186,6 +199,43 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 if v['group'] == 'text' and v['lr_scale'] == 1.0:
                     index_text = i
 
+            # if args.sparc_loss:
+            #     logging.info(
+            #         f"Global Steps: {step + 1} "
+            #         f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
+            #         f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
+            #         f"Loss(CLIP): {loss_clip_m.val:#.5g} ({loss_clip_m.avg:#.4g}) "
+            #         f"Loss(SPARC): {loss_sparc_m.val:#.5g} ({loss_sparc_m.avg:#.4g}) "
+            #         f"Grad Norm: {grad_norm_m.val:#.5g} ({grad_norm_m.avg:#.4g}) "
+            #         f"Loss Scaler: {loss_scaler.val:#.5g} ({loss_scaler.avg:#.4g}) "
+            #         f"LR: {optimizer.param_groups[0]['lr']:5f} "
+            #         f"LR_visual: {optimizer.param_groups[index_visual]['lr']:5f} "
+            #         f"LR_text: {optimizer.param_groups[index_text]['lr']:5f} "
+            #         f"Logit Scale: {logit_scale_scalar:.3f} "
+            #         f"i2t_acc: {acc['i2t'].item() * 100:.2f} "
+            #         f"t2i_acc: {acc['t2i'].item() * 100:.2f} "
+            #         f"Data (t): {data_time_m.avg:.3f} "
+            #         f"Batch (t): {batch_time_m.avg:.3f}, {args.batch_size*args.world_size / batch_time_m.val:#g}/s"
+            #     )
+            
+            # # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
+            #     log_data = {
+            #         "loss": loss_m.val,
+            #         "loss_clip": loss_clip_m.val,
+            #         "loss_sparc": loss_sparc_m.val,
+            #         "loss_scaler": loss_scaler.val,
+            #         "grad_nrom": grad_norm_m.val,
+            #         "i2t_acc": acc['i2t'].item() * 100,
+            #         "t2i_acc": acc['t2i'].item() * 100,
+            #         "scale":  logit_scale_scalar,
+            #         "lr": optimizer.param_groups[0]["lr"],
+            #         "lr_visual": optimizer.param_groups[index_visual]["lr"],
+            #         "lr_text": optimizer.param_groups[index_text]["lr"],
+            #         "data_time": data_time_m.val,
+            #         "batch_time": batch_time_m.val,
+            #         "samples_per_scond": args.batch_size*args.world_size / batch_time_m.val,
+            #     }
+            # else:
             logging.info(
                 f"Global Steps: {step + 1} "
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
@@ -202,8 +252,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 f"Data (t): {data_time_m.avg:.3f} "
                 f"Batch (t): {batch_time_m.avg:.3f}, {args.batch_size*args.world_size / batch_time_m.val:#g}/s"
             )
-            
-            # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
+
             log_data = {
                 "loss": loss_m.val,
                 "loss_clip": loss_clip_m.val,
@@ -231,6 +280,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
+    gc.collect()
+    torch.cuda.empty_cache()
     # end for
 
 def evaluate(model, data, epoch, args, tb_writer=None):

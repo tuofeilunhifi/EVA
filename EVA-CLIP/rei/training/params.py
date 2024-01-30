@@ -284,6 +284,12 @@ def parse_args(args):
         action="store_true",
         help="calculate loss w/ local features @ global (instead of realizing full global @ global matrix)"
     )
+    # parser.add_argument(
+    #     "--sparc-loss",
+    #     default=False,
+    #     action="store_true",
+    #     help="calculate sparc loss"
+    # )
     parser.add_argument(
         "--gather-with-grad",
         default=False,

@@ -681,6 +681,8 @@ class TextTransformer(nn.Module):
         else:
             self.attn_mask = None
 
+        self.pad_token_id = 0
+
         self.init_parameters()
 
     def init_parameters(self):

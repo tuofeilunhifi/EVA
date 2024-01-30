@@ -52,7 +52,7 @@ fi
 
 MODEL=EVA02-CLIP-bigE-14-plus
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
-PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/pytorch_model-00001-of-00002.bin # ckpt is splited into 2 parts. could merge first then load.
+PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/open_clip_pytorch_model.bin # ckpt is splited into 2 parts. could merge first then load.
 PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
 PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
@@ -79,7 +79,7 @@ torchrun --nnodes=${WORLD_SIZE} \
   --rdzv_backend=c10d \
   --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
-        --save-frequency 1 \
+        --save-frequency 10 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
         --wandb-project-name="eva-clip" \
@@ -90,7 +90,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="json" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1000 \
+        --batch-size=900 \
         --epochs=100 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
@@ -118,4 +118,4 @@ torchrun --nnodes=${WORLD_SIZE} \
         --force-patch-dropout=0.5 \
         --optimizer="lamb" \
         --zero-stage=1 \
-        --enable-deepspeed
+        --enable-deepspeed \

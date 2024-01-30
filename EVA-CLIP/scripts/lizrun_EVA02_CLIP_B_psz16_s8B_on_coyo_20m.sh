@@ -79,7 +79,7 @@ torchrun --nnodes=${WORLD_SIZE} \
   --rdzv_backend=c10d \
   --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
-        --save-frequency 1 \
+        --save-frequency 10 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
         --wandb-project-name="eva-clip" \
@@ -118,4 +118,5 @@ torchrun --nnodes=${WORLD_SIZE} \
         --force-patch-dropout=0 \
         --optimizer="lamb" \
         --zero-stage=1 \
-        --enable-deepspeed
+        --enable-deepspeed \
+        # --sparc-loss

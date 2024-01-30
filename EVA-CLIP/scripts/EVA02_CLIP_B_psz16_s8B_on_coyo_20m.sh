@@ -25,7 +25,7 @@ VAL_DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k/val
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
 torchrun --nproc_per_node=4 --nnodes=1 \
     training/main.py \
-        --save-frequency 1 \
+        --save-frequency 10 \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
         --wandb-project-name="eva-clip" \
@@ -64,4 +64,5 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --force-patch-dropout=0 \
         --optimizer="lamb" \
         --zero-stage=1 \
-        --enable-deepspeed
+        --enable-deepspeed \
+        # --sparc-loss

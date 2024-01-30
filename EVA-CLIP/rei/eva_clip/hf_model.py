@@ -87,9 +87,6 @@ class HFTextEncoder(nn.Module):
             context_length: int = 77,
             attn_mask: bool = True):
         super().__init__()
-        # print(model_name_or_path, output_dim, tokenizer_name, config, pooler_type, proj, pretrained, masked_language_modeling)
-        # /mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189 1024 None None mean_pooler mlp True False
-        # exit()
 
         self.context_length = context_length
         self.pad_token_id = 0
@@ -141,11 +138,6 @@ class HFTextEncoder(nn.Module):
                 nn.GELU(),
                 nn.Linear(hidden_size, output_dim, bias=False),
             )
-
-        if attn_mask:
-            self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
-        else:
-            self.attn_mask = None
 
         # self.itm_proj = nn.Linear(d_model, 2, bias=False)
         # self.mlm_proj = nn.Linear(d_model, self.config.vocab_size), bias=False)
@@ -231,15 +223,7 @@ class HFTextEncoder(nn.Module):
         out = self.transformer(input_ids=x, attention_mask=attn_mask)
         pooled_out = self.pooler(out, attn_mask)
 
-        return self.proj(pooled_out)
-
-    def build_attention_mask(self):
-        # lazily create causal attention mask, with full attention between the vision tokens
-        # pytorch uses additive attention mask; fill with -inf
-        mask = torch.empty(self.context_length, self.context_length)
-        mask.fill_(float("-inf"))
-        mask.triu_(1)  # zero out the lower diagonal
-        return mask
+        return self.proj(pooled_out) #, out, attn_mask
 
     def lock(self, unlocked_layers:int=0, freeze_layer_norm:bool=True):
         if not unlocked_layers: # full freezing
