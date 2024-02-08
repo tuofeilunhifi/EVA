@@ -7,7 +7,7 @@ PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_CLIP_E_psz14_plus_s9B.pt
 # can set PRETRAINED=eva to automaticaly download and load weights; please check details in pretrained.py
 # PRETRAINED=eva_clip
 
-DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k/val
+DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 torchrun --nproc_per_node=1 --nnodes=1 training/main.py \
         --imagenet-val ${DATA_PATH} \

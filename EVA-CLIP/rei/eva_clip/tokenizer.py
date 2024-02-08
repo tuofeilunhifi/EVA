@@ -181,15 +181,16 @@ def tokenize(texts: Union[str, List[str]], context_length: int = 77) -> torch.Lo
             tokens = tokens[:context_length]  # Truncate
             tokens[-1] = eot_token
         result[i, :len(tokens)] = torch.tensor(tokens)
-
+        # print(sot_token, eot_token, tokens)
     return result
 
 
 class HFTokenizer:
     "HuggingFace tokenizer wrapper"
     def __init__(self, tokenizer_name:str):
-        from transformers import AutoTokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        from transformers import AutoTokenizer, LlamaTokenizer
+        self.tokenizer = LlamaTokenizer.from_pretrained(tokenizer_name)
+        self.tokenizer.pad_token = self.tokenizer.unk_token
 
     def __call__(self, texts:Union[str, List[str]], context_length:int=77) -> torch.Tensor:
         # same cleaning as for default tokenizer, except lowercasing
@@ -198,4 +199,5 @@ class HFTokenizer:
             texts = [texts]
         texts = [whitespace_clean(basic_clean(text)) for text in texts]
         input_ids = self.tokenizer(texts, return_tensors='pt', max_length=context_length, padding='max_length', truncation=True).input_ids
+        # print(texts[0], input_ids[0])
         return input_ids

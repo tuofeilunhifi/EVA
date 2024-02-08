@@ -1,9 +1,9 @@
-export CUDA_VISIBLE_DEVICES=4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
-MODEL=EVA02-CLIP-bigE-14-plus
+MODEL=EVA02-CLIP-bigE-14-plus-LLaMA-CN-7B
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
-PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/snapshots/bc7788f151930d91b58474715fdce5524ad9a189/open_clip_pytorch_model.bin # ckpt is splited into 2 parts. could merge first then load.
+PRETRAINED_TEXT='' # ckpt is splited into 2 parts. could merge first then load.
 PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
 PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
@@ -36,7 +36,7 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --dataset-type="json" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1000 \
+        --batch-size=64 \
         --epochs=100 \
         --lr=5e-4 \
         --visual-lr=4e-4 \

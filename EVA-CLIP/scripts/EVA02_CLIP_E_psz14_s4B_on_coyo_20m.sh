@@ -18,7 +18,7 @@ PRETRAINED_TEXT_MODEL=OpenCLIP-H-14
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
 COYO_20M_DATA_PATH=/mnt/pfs-guan-ssai/cv/cjy/data/coyo/grit_coyo_20m_all_2.json
-VAL_DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k/val
+VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
 #        	--nnodes=$WORLD_SIZE --node_rank=$RANK \

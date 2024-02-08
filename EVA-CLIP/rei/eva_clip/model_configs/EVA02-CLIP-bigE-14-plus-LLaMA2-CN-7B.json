@@ -1,0 +1,26 @@
+{
+    "embed_dim": 1024,
+    "vision_cfg": {
+        "image_size": 224,
+        "layers": 64,
+        "width": 1792,
+        "head_width": 112,
+        "mlp_ratio": 8.571428571428571,
+        "patch_size": 14,
+        "eva_model_name": "eva-clip-4b-14-x",
+        "drop_path_rate": 0,
+        "xattn": true,
+        "postnorm": true,
+        "fusedLN": true
+    },
+    "text_cfg": {
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-7b/snapshots/c40cf9ac38b789d542b582f842a9f62511fa3bf1",
+        "context_length": 77,
+        "vocab_size": 49408,
+        "width": 1280,
+        "heads": 20,
+        "layers": 32,
+        "xattn": false,
+        "fusedLN": true
+    }
+}

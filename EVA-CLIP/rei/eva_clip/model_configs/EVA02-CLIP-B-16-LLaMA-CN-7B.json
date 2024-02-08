@@ -1,0 +1,31 @@
+{
+    "embed_dim": 512,
+    "vision_cfg": {
+        "image_size": 224,
+        "layers": 12,
+        "width": 768,
+        "head_width": 64,
+        "patch_size": 16,
+        "mlp_ratio": 2.6667,
+        "eva_model_name": "eva-clip-b-16-X",
+        "drop_path_rate": 0.0,
+        "xattn": true,
+        "fusedLN": true,
+        "rope": true,
+        "pt_hw_seq_len": 16,
+        "intp_freq": true,
+        "naiveswiglu": true,
+        "subln": true
+    },
+    "text_cfg": {
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--minlik--chinese-llama-plus-7b-merged/snapshots/f349700f2d5537b6500c6d9838eff2479902dbdb",
+        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--minlik--chinese-llama-plus-7b-merged/snapshots/f349700f2d5537b6500c6d9838eff2479902dbdb",
+        "context_length": 77,
+        "vocab_size": 49953,
+        "width": 4096,
+        "heads": 32,
+        "layers": 32,
+        "xattn": true,
+        "fusedLN": true
+    }
+}

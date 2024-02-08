@@ -53,17 +53,17 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-B-16
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_B_psz14to16.pt
-PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/clip/ViT-B-16.pt
-PRETRAINED_VISUAL_MODEL=EVA02-B-16
-PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
+MODEL=EVA02-CLIP-bigE-14-plus-LLaMA-CN-7B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_E_psz14.pt
+PRETRAINED_TEXT='' # ckpt is splited into 2 parts. could merge first then load.
+PRETRAINED_VISUAL_MODEL=EVA02-bigE-14
+PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
-# PRETRAINED_TEXT=openai
-# PRETRAINED_VISUAL_MODEL=EVA02-B-16
-# PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
+# PRETRAINED_TEXT=laion2b_s39b_b160k
+# PRETRAINED_VISUAL_MODEL=EVA02-CLIP-bigE-14
+# PRETRAINED_TEXT_MODEL=OpenCLIP-bigG-14
 
 
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
@@ -86,23 +86,23 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zeroshot-frequency 1 \
         --report-to="tensorboard" \
         --wandb-project-name="eva-clip" \
-        --wandb-notes="eva02_clip_B_16" \
+        --wandb-notes="eva02_clip_E_14" \
         --train-num-samples 40000000 \
         --dataset-resampled \
         --train-data=${COYO_20M_DATA_PATH} \
         --dataset-type="json" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=2048 \
-        --epochs=200 \
+        --batch-size=128 \
+        --epochs=100 \
         --lr=5e-4 \
-        --visual-lr=2e-4 \
-        --text-lr=2e-5 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
         --wd=0.05 \
         --visual-wd=0.05 \
         --text-wd=0.05 \
         --ld=1.0 \
-        --visual-ld=0.75 \
+        --visual-ld=0.9 \
         --text-ld=0.75 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
@@ -118,7 +118,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --grad-checkpointing \
         --local-loss \
         --force-custom-clip \
-        --force-patch-dropout=0 \
+        --force-patch-dropout=0.5 \
         --optimizer="lamb" \
         --zero-stage=1 \
         --enable-deepspeed \

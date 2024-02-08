@@ -23,3 +23,5 @@ regex
 iopath
 pyyaml
 ijson
+pydantic==1.10.9
+protobuf==3.20.0
