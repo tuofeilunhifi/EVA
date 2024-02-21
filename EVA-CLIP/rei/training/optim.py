@@ -39,10 +39,16 @@ def get_num_layer_for_transformer(param_name, num_max_layer):
     #huggingface->text.transformer.encoder.layer
     layer_regex = re.compile(r"layers\.([0-9]+)\.") 
     match_layer = layer_regex.search(param_name)
+
+    cross_attn_regex = re.compile(r"cross_attn\.([0-9]+)\.") 
+    match_cross_attn = cross_attn_regex.search(param_name)
+
     if match_block is not None:
         return int(match_block.group(1)) + 1
     elif match_layer is not None:
         return int(match_layer.group(1)) + 1
+    elif match_cross_attn is not None:
+        return int(match_cross_attn.group(1)) + 1
     else:
         return num_max_layer - 1
 
@@ -76,10 +82,18 @@ def get_parameters(args, model, assigner, tower):
             if hasattr(model.text, 'no_weight_decay'):
                 skip = set.union(skip, model.text.no_weight_decay())
         skip = ['text.' + n for n in skip]
+    elif tower == 'text_decoder':
+        lr = args.text_decoder_lr if args.text_decoder_lr is not None else args.lr
+        weight_decay = args.text_decoder_wd if args.text_decoder_wd is not None else args.wd
+        filter_parameters = [[name, param] for name, param in model.named_parameters() if 'text_decoder.' in name]
+        if hasattr(model, 'text_decoder'):
+            if hasattr(model.text_decoder, 'no_weight_decay'):
+                skip = set.union(skip, model.text_decoder.no_weight_decay())
+        skip = ['text_decoder.' + n for n in skip]
     else:
         lr = args.lr
         weight_decay = args.wd
-        exclude = lambda n: 'visual.' not in n and 'text.' not in n
+        exclude = lambda n: 'visual.' not in n and 'text.' not in n and 'text_decoder.' not in n
         filter_parameters = [[n, p] for n, p in model.named_parameters() if exclude(n)]
         if hasattr(model, 'no_weight_decay'):
             skip = set.union(skip, model.no_weight_decay())
@@ -141,6 +155,7 @@ def get_parameters(args, model, assigner, tower):
 def get_assigner(args, model):
     visual_ld = args.visual_ld if args.visual_ld else args.ld
     text_ld = args.text_ld if args.text_ld else args.ld
+    text_decoder_ld = args.text_decoder_ld if args.text_decoder_ld else args.ld
     
     if visual_ld < 1.0:
         visual_num_layers = model.visual.get_num_layers()
@@ -154,22 +169,32 @@ def get_assigner(args, model):
     else:
         assigner_text = None
 
+    if text_decoder_ld < 1.0:
+        text_decoder_num_layers = model.text_decoder.get_num_layers()
+        assigner_text_decoder = LayerDecayValueAssigner(list(text_decoder_ld ** (text_decoder_num_layers + 1 - i) for i in range(text_decoder_num_layers + 2)))
+    else:
+        assigner_text_decoder = None
+
     if assigner_visual is not None:
         logging.info("Assigned visual values = %s" % str(assigner_visual.values))
     if assigner_text is not None:
         logging.info("Assigned text values = %s" % str(assigner_text.values))
-    return assigner_visual, assigner_text
+    if assigner_text_decoder is not None:
+        logging.info("Assigned text decoder values = %s" % str(assigner_text_decoder.values))
+    return assigner_visual, assigner_text, assigner_text_decoder
 
 def get_all_parameters(args, model):
-    assigner_visual, assigner_text = get_assigner(args, model)
+    assigner_visual, assigner_text, assigner_text_decoder = get_assigner(args, model)
         
     parameters = []
     visual_parameters = get_parameters(args, model, assigner_visual, 'visual')
     text_parameters = get_parameters(args, model, assigner_text, 'text')
+    text_decoder_parameters = get_parameters(args, model, assigner_text_decoder, 'text_decoder')
     other_parameters = get_parameters(args, model, None, 'other')
 
     parameters.extend(visual_parameters)
     parameters.extend(text_parameters)
+    parameters.extend(text_decoder_parameters)
     parameters.extend(other_parameters)
 
     if len(parameters) == 0:

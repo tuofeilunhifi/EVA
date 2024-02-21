@@ -19,7 +19,7 @@ except:
 from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .eva_vit_model import EVAVisionTransformer
-from .transformer import LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer
+from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer, MultimodalTransformer
 
 try:
     from apex.normalization import FusedLayerNorm
@@ -61,6 +61,12 @@ class CLIPVisionCfg:
     naiveswiglu: bool = False
     subln: bool = False
 
+    attentional_pool: bool = False  # whether to use attentional pooler in the last embedding layer (overrides pool_type)
+    attn_pooler_queries: int = 256  # n_queries for attentional pooler
+    attn_pooler_heads: int = 8  # n heads for attentional_pooling
+    output_tokens: bool = False
+    pool_type: str = 'tok'
+    final_ln_after_pool: bool = False  # apply final LayerNorm after pooling
 
 @dataclass
 class CLIPTextCfg:
@@ -74,11 +80,22 @@ class CLIPTextCfg:
     hf_tokenizer_name: str = None
     hf_model_pretrained: bool = True
     proj: str = 'mlp'
-    pooler_type: str = 'mean_pooler'
+    pool_type: str = 'argmax'
     masked_language_modeling: bool = False
     fusedLN: bool = False
     xattn: bool = False
     attn_mask: bool = True
+
+    embed_cls: bool = False
+    output_tokens: bool = False
+
+@dataclass
+class MultimodalCfg(CLIPTextCfg):
+    mlp_ratio: int = 4
+    dim_head: int = 64
+    heads: int = 8
+    n_queries: int = 256
+    attn_pooler_heads: int = 8
 
 def get_cast_dtype(precision: str):
     cast_dtype = None
@@ -88,13 +105,6 @@ def get_cast_dtype(precision: str):
         cast_dtype = torch.float16
     return cast_dtype
 
-def get_input_dtype(precision: str):
-    input_dtype = None
-    if precision in ('bf16', 'pure_bf16'):
-        input_dtype = torch.bfloat16
-    elif precision in ('fp16', 'pure_fp16'):
-        input_dtype = torch.float16
-    return input_dtype
 
 def _build_vision_tower(
         embed_dim: int,
@@ -135,7 +145,11 @@ def _build_vision_tower(
             intp_freq= vision_cfg.intp_freq,
             naiveswiglu= vision_cfg.naiveswiglu,
             subln= vision_cfg.subln,
-            output_dim=embed_dim,
+            pool_type=vision_cfg.pool_type,
+            attentional_pool=vision_cfg.attentional_pool,
+            attn_pooler_heads=vision_cfg.attn_pooler_heads, 
+            output_tokens=vision_cfg.output_tokens,
+            output_dim=embed_dim
         )
     elif vision_cfg.timm_model_name:
         visual = TimmModel(
@@ -212,8 +226,35 @@ def _build_text_tower(
             norm_layer= FusedLayerNorm if text_cfg.fusedLN else norm_layer,
             xattn=text_cfg.xattn,
             attn_mask=text_cfg.attn_mask,
+            output_tokens=text_cfg.output_tokens
         )
     return text
+
+def _build_text_decoder_tower(
+        embed_dim,
+        multimodal_cfg,
+        quick_gelu: bool = False,
+        cast_dtype: Optional[torch.dtype] = None,
+):
+    multimodal_cfg = MultimodalCfg(**multimodal_cfg) if isinstance(multimodal_cfg, dict) else multimodal_cfg
+    act_layer = QuickGELU if quick_gelu else nn.GELU
+    norm_layer = (
+        LayerNormFp32 if cast_dtype in (torch.float16, torch.bfloat16) else LayerNorm
+    )
+
+    decoder = MultimodalTransformer(
+        context_length=multimodal_cfg.context_length,
+        width=multimodal_cfg.width,
+        heads=multimodal_cfg.heads,
+        layers=multimodal_cfg.layers,
+        ls_init_value=multimodal_cfg.ls_init_value,
+        output_dim=embed_dim,
+        act_layer=act_layer,
+        norm_layer=norm_layer,
+        xattn=multimodal_cfg.xattn,
+    )
+
+    return decoder
 
 class CLIP(nn.Module):
     def __init__(
@@ -275,10 +316,11 @@ class CLIP(nn.Module):
         return image_features, text_features, self.logit_scale.exp()
 
 
-class CustomCLIP(nn.Module):
+class CoCa(nn.Module):
     def __init__(
             self,
             embed_dim: int,
+            multimodal_cfg: MultimodalCfg,
             vision_cfg: CLIPVisionCfg,
             text_cfg: CLIPTextCfg,
             quick_gelu: bool = False,
@@ -288,6 +330,13 @@ class CustomCLIP(nn.Module):
         super().__init__()
         self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype)
         self.text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
+        self.vocab_size = self.text.vocab_size
+        self.text_decoder = _build_text_decoder_tower(
+            self.vocab_size,
+            multimodal_cfg=multimodal_cfg,
+            quick_gelu=quick_gelu,
+            cast_dtype=cast_dtype,
+        )
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
     def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
@@ -301,23 +350,48 @@ class CustomCLIP(nn.Module):
     def set_grad_checkpointing(self, enable=True):
         self.visual.set_grad_checkpointing(enable)
         self.text.set_grad_checkpointing(enable)
+        self.text_decoder.set_grad_checkpointing(enable)
 
     @torch.jit.ignore
     def no_weight_decay(self):
         return {'logit_scale'}
 
-    def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
-        return F.normalize(features, dim=-1) if normalize else features
+    # def encode_image(self, image, normalize: bool = False):
+    #     features = self.visual(image)
+    #     return F.normalize(features, dim=-1) if normalize else features
+
+    def encode_image(self, images, normalize: bool = False):
+        image_latent, tokens_embs = self.visual(images)
+        image_latent = F.normalize(image_latent, dim=-1) if normalize else image_latent
+        return image_latent, tokens_embs
+
+    # def encode_text(self, text, normalize: bool = False):
+    #     features = self.text(text)
+    #     return F.normalize(features, dim=-1) if normalize else features
 
     def encode_text(self, text, normalize: bool = False):
-        features = self.text(text)
-        return F.normalize(features, dim=-1) if normalize else features
+        text_latent, token_emb = self.text(text)
+        text_latent = F.normalize(text_latent, dim=-1) if normalize else text_latent
+        return text_latent, token_emb
 
-    def forward(self, image, text):
-        image_features = self.encode_image(image, normalize=True)
-        text_features = self.encode_text(text, normalize=True)
-        return image_features, text_features, self.logit_scale.exp()
+    def forward(self, image, text, is_training=True):
+        image_latent, image_embs = self.encode_image(image, normalize=True)
+        text_latent, token_embs = self.encode_text(text, normalize=True)
+
+        # TODO: add assertion to avoid bugs?
+        labels = text[:, 1:]
+        if is_training:
+            token_embs = token_embs[:, :-1]
+
+        logits = self.text_decoder(image_embs, token_embs)
+        out_dict = {
+            "image_features": image_latent,
+            "text_features": text_latent,
+            "logits": logits,
+            "labels": labels,
+            "logit_scale": self.logit_scale.exp()
+        }
+        return out_dict
 
 
 def convert_weights_to_lp(model: nn.Module, dtype=torch.float16):

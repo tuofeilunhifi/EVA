@@ -128,6 +128,7 @@ def parse_args(args):
     )
     parser.add_argument("--lr", type=float, default=None, help="Learning rate.")
     parser.add_argument("--text-lr", type=float, default=None, help="Learning rate of text encoder.")
+    parser.add_argument("--text-decoder-lr", type=float, default=None, help="Learning rate of text decoder.")
     parser.add_argument("--visual-lr", type=float, default=None, help="Learning rate of visual encoder.")
 
     parser.add_argument("--beta1", type=float, default=None, help="Adam beta 1.")
@@ -136,10 +137,12 @@ def parse_args(args):
 
     parser.add_argument("--wd", type=float, default=0.2, help="Weight decay.")
     parser.add_argument("--text-wd", type=float, default=None, help="Weight decay of text encoder.")
+    parser.add_argument("--text-decoder-wd", type=float, default=None, help="Weight decay of text decoder.")
     parser.add_argument("--visual-wd", type=float, default=None, help="Weight decay of visual encoder.")
 
     parser.add_argument("--ld", type=float, default=1.0, help="Learning rate Layer decay.")
     parser.add_argument("--text-ld", type=float, default=None, help="Learning rate Layer decay of text encoder.")
+    parser.add_argument("--text-decoder-ld", type=float, default=None, help="Learning rate Layer decay of text decoder.")
     parser.add_argument("--visual-ld", type=float, default=None, help="Learning rate Layer decay of visual encoder.")
     
     parser.add_argument(
@@ -326,6 +329,9 @@ def parse_args(args):
         action='store_true',
         help="torch.jit.trace the model for inference / eval only",
     )
+    parser.add_argument(
+        "--accum-freq", type=int, default=1, help="Update the model every --acum-freq steps."
+    )
     # arguments for distributed training
     parser.add_argument(
         "--dist-url",
@@ -458,6 +464,24 @@ def parse_args(args):
         help="Step interval to store embeddings",
     )
     parser.add_argument('--enable_deepspeed', action='store_true', default=False)
+    parser.add_argument(
+        "--coca-caption-loss-weight",
+        type=float,
+        default=2.0,
+        help="Weight assigned to caption loss in CoCa."
+    )
+    parser.add_argument(
+        "--coca-contrastive-loss-weight",
+        type=float,
+        default=1.0,
+        help="Weight assigned to contrastive loss when training CoCa."
+    )
+    parser.add_argument(
+        "--horovod",
+        default=False,
+        action="store_true",
+        help="Use horovod for distributed training."
+    )
 
     args = parser.parse_args(args)
 

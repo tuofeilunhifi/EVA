@@ -29,6 +29,8 @@ except ImportError:
     xops = None
     print("Please 'pip install xformers'")
 
+from typing import Callable, Optional, Sequence, Tuple
+
 
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
@@ -362,6 +364,35 @@ class RelativePositionBias(nn.Module):
                 self.window_size[0] * self.window_size[1] + 1, -1)  # Wh*Ww,Wh*Ww,nH
         return relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
 
+class LayerNorm(nn.LayerNorm):
+    """Subclass torch's LayerNorm (with cast back to input dtype)."""
+
+    def forward(self, x: torch.Tensor):
+        orig_type = x.dtype
+        x = F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+        return x.to(orig_type)
+
+class AttentionalPooler(nn.Module):
+    def __init__(
+            self,
+            d_model: int,
+            context_dim: int,
+            n_head: int = 8,
+            n_queries: int = 256,
+            norm_layer: Callable = LayerNorm
+    ):
+        super().__init__()
+        self.query = nn.Parameter(torch.randn(n_queries, d_model))
+        self.attn = nn.MultiheadAttention(d_model, n_head, kdim=context_dim, vdim=context_dim)
+        self.ln_q = norm_layer(d_model)
+        self.ln_k = norm_layer(context_dim)
+
+    def forward(self, x: torch.Tensor):
+        x = self.ln_k(x).permute(1, 0, 2)  # NLD -> LND
+        N = x.shape[1]
+        q = self.ln_q(self.query)
+        out = self.attn(q.unsqueeze(1).expand(-1, N, -1), x, x, need_weights=False)[0]
+        return out.permute(1, 0, 2)  # LND -> NLD
 
 class EVAVisionTransformer(nn.Module):
     """ Vision Transformer with support for patch or hybrid CNN input stage
@@ -371,8 +402,11 @@ class EVAVisionTransformer(nn.Module):
                  drop_path_rate=0., norm_layer=nn.LayerNorm, init_values=None, patch_dropout=0.,
                  use_abs_pos_emb=True, use_rel_pos_bias=False, use_shared_rel_pos_bias=False, rope=False,
                  use_mean_pooling=True, init_scale=0.001, grad_checkpointing=False, xattn=False, postnorm=False,
-                 pt_hw_seq_len=16, intp_freq=False, naiveswiglu=False, subln=False):
+                 pt_hw_seq_len=16, intp_freq=False, naiveswiglu=False, subln=False, 
+                 attentional_pool=False, attn_pooler_queries=256, attn_pooler_heads=8, 
+                 output_tokens=False, pool_type='tok', final_ln_after_pool=False, output_dim=512):
         super().__init__()
+        self.output_tokens = output_tokens
         self.image_size = img_size
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
@@ -417,9 +451,9 @@ class EVAVisionTransformer(nn.Module):
                 init_values=init_values, window_size=self.patch_embed.patch_shape if use_rel_pos_bias else None,
                 xattn=xattn, rope=self.rope, postnorm=postnorm, subln=subln, naiveswiglu=naiveswiglu)
             for i in range(depth)])
-        self.norm = nn.Identity() if use_mean_pooling else norm_layer(embed_dim)
-        self.fc_norm = norm_layer(embed_dim) if use_mean_pooling else None
-        self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
+        # self.norm = nn.Identity() if use_mean_pooling else norm_layer(embed_dim)
+        # self.fc_norm = norm_layer(embed_dim) if use_mean_pooling else None
+        # self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
         if self.pos_embed is not None:
             trunc_normal_(self.pos_embed, std=.02)
@@ -430,15 +464,64 @@ class EVAVisionTransformer(nn.Module):
         self.apply(self._init_weights)
         self.fix_init_weight()
 
-        if isinstance(self.head, nn.Linear):
-            trunc_normal_(self.head.weight, std=.02)
-            self.head.weight.data.mul_(init_scale)
-            self.head.bias.data.mul_(init_scale)
+        # if isinstance(self.head, nn.Linear):
+        #     trunc_normal_(self.head.weight, std=.02)
+        #     self.head.weight.data.mul_(init_scale)
+        #     self.head.bias.data.mul_(init_scale)
 
         # setting a patch_dropout of 0. would mean it is disabled and this function would be the identity fn
         self.patch_dropout = PatchDropout(patch_dropout) if patch_dropout > 0. else nn.Identity()
 
         self.grad_checkpointing = grad_checkpointing
+
+        if attentional_pool:
+            if isinstance(attentional_pool, str):
+                self.attn_pool_type = attentional_pool
+                self.pool_type = 'none'
+                if attentional_pool in ('parallel', 'cascade'):
+                    self.attn_pool = AttentionalPooler(
+                        output_dim,
+                        embed_dim,
+                        n_head=attn_pooler_heads,
+                        n_queries=attn_pooler_queries,
+                    )
+                    self.attn_pool_contrastive = AttentionalPooler(
+                        output_dim,
+                        output_dim,
+                        n_head=attn_pooler_heads,
+                        n_queries=1,
+                    )
+                else:
+                    assert False
+            else:
+                self.attn_pool_type = ''
+                self.pool_type = pool_type
+                self.attn_pool = AttentionalPooler(
+                    output_dim,
+                    embed_dim,
+                    n_head=attn_pooler_heads,
+                    n_queries=attn_pooler_queries,
+                )
+                self.attn_pool_contrastive = None
+            pool_dim = output_dim
+        else:
+            self.attn_pool = None
+            pool_dim = embed_dim
+            self.pool_type = pool_type
+
+        self.ln_post = norm_layer(pool_dim)
+        scale = embed_dim ** -0.5
+        self.proj = nn.Parameter(scale * torch.randn(pool_dim, output_dim))
+
+    def _global_pool(self, x):
+        if self.pool_type == 'avg':
+            pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+        elif self.pool_type == 'tok':
+            pooled, tokens = x[:, 0], x[:, 1:]
+        else:
+            pooled = tokens = x
+
+        return pooled, tokens
 
     def fix_init_weight(self):
         def rescale(param, layer_id):
@@ -486,7 +569,7 @@ class EVAVisionTransformer(nn.Module):
         self.num_classes = num_classes
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x, return_all_features=False):
+    def forward(self, x):
         
         x = self.patch_embed(x)
         batch_size, seq_len, _ = x.size()
@@ -515,17 +598,47 @@ class EVAVisionTransformer(nn.Module):
             else:
                 x = blk(x, rel_pos_bias=rel_pos_bias)
 
-        if not return_all_features:
-            x = self.norm(x)
-            if self.fc_norm is not None:
-                return self.fc_norm(x.mean(1))
+        # if not return_all_features:
+        #     x = self.norm(x)
+        #     if self.fc_norm is not None:
+        #         return self.fc_norm(x.mean(1))
+        #     else:
+        #         return x[:, 0]
+        # return x
+        if self.attn_pool is not None:
+            if self.attn_pool_contrastive is not None:
+                # This is untested, WIP pooling that should match paper
+                tokens = self.attn_pool(x)
+                tokens = self.ln_post(tokens)  # TBD LN first or separate one after each pool?
+                if self.attn_pool_type == 'parallel':
+                    pooled = self.attn_pool_contrastive(x)
+                else:
+                    assert self.attn_pool_type == 'cascade'
+                    pooled = self.attn_pool_contrastive(tokens)
+                pooled = pooled.squeeze()
             else:
-                return x[:, 0]
-        return x
+                # this is the original OpenCLIP CoCa setup, does not match paper
+                x = self.attn_pool(x)
+                x = self.ln_post(x)
+                pooled, tokens = self._global_pool(x)
+        elif self.final_ln_after_pool:
+            pooled, tokens = self._global_pool(x)
+            pooled = self.ln_post(pooled)
+        else:
+            x = self.ln_post(x)
+            pooled, tokens = self._global_pool(x)
 
-    def forward(self, x, return_all_features=False):
-        if return_all_features:
-            return self.forward_features(x, return_all_features)
-        x = self.forward_features(x)
-        x = self.head(x)
-        return x
+        if self.proj is not None:
+            pooled = pooled @ self.proj
+
+        if self.output_tokens:
+            return pooled, tokens
+        
+        return pooled
+
+    # def forward(self, x, return_all_features=False):
+    #     if return_all_features:
+    #         return self.forward_features(x, return_all_features)
+    #     x = self.forward_features(x)
+    #     x = self.head(x)
+    #     return x

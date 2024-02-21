@@ -29,6 +29,8 @@ def warmup_cosine_lr(optimizer, args, steps):
                 base_lr = args.text_lr if args.text_lr is not None else args.lr
             elif param_group['group'] == 'visual':
                 base_lr = args.visual_lr if args.visual_lr is not None else args.lr
+            elif param_group['group'] == 'text_decoder':
+                base_lr = args.text_decoder_lr if args.text_decoder_lr is not None else args.lr
             else:
                 base_lr = args.lr
 
@@ -51,6 +53,8 @@ def warmup_step_lr(optimizer, args, decay_t=500, decay_rate=0.8):
                 base_lr = args.text_lr
             elif param_group['group'] == 'visual':
                 base_lr = args.visual_lr
+            elif param_group['group'] == 'text_decoder':
+                base_lr = args.text_decoder_lr
             else:
                 base_lr = args.lr
 

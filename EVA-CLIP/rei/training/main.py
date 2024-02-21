@@ -19,7 +19,7 @@ try:
 except ImportError:
     tensorboard = None
 
-from eva_clip import create_model_and_transforms, create_model_from_pretrained, trace_model, get_tokenizer
+from eva_clip import create_model_and_transforms, create_model_from_pretrained, trace_model, get_tokenizer, create_loss
 
 from training.data import get_data
 from training.distributed import is_master, init_distributed_device, world_info_from_env, create_deepspeed_config
@@ -325,12 +325,13 @@ def main(args):
         return
 
     # torch.cuda.synchronize()
+    loss = create_loss(args)
 
     for epoch in range(start_epoch, args.epochs):
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
+        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, args, tb_writer=writer)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):

@@ -17,11 +17,17 @@ try:
     import wandb
 except ImportError:
     wandb = None
-from eva_clip import ClipLoss, SPARCLoss, get_cast_dtype, get_tokenizer
+from eva_clip import ClipLoss, SPARCLoss, get_cast_dtype, get_tokenizer, get_input_dtype
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 from .precision import get_autocast
 from .utils import save_file
+
+def backward(total_loss, scaler):
+    if scaler is not None:
+        scaler.scale(total_loss).backward()
+    else:
+        total_loss.backward()
 
 
 class AverageMeter(object):
@@ -71,19 +77,215 @@ def get_grad_norm_(parameters, norm_type: float = 2.0) -> torch.Tensor:
         total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
     return total_norm.to(dtype=torch.float32)
 
-def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None):
+def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, args, tb_writer=None):
+    # device = torch.device(args.device)
+    # autocast = get_autocast(args.precision)
+    # input_dtype = get_input_dtype(args.precision)
+
+    # model.train()
+
+    # data['train'].set_epoch(epoch)  # set epoch in process safe manner via sampler or shared_epoch
+    # dataloader = data['train'].dataloader
+    # num_batches_per_epoch = dataloader.num_batches // args.accum_freq
+    # sample_digits = math.ceil(math.log(dataloader.num_samples + 1, 10))
+
+    # if args.accum_freq > 1:
+    #     accum_images, accum_texts, accum_features = [], [], {}
+
+    # losses_m = {}
+    # batch_time_m = AverageMeter()
+    # data_time_m = AverageMeter()
+    # end = time.time()
+    # for i, batch in enumerate(dataloader):
+    #     i_accum = i // args.accum_freq
+    #     step = num_batches_per_epoch * epoch + i_accum
+
+    #     if not args.skip_scheduler:
+    #         scheduler(step)
+
+    #     images, texts = batch
+    #     images = images.to(device=device, dtype=input_dtype, non_blocking=True)
+    #     texts = texts.to(device=device, non_blocking=True)
+
+    #     data_time_m.update(time.time() - end)
+    #     optimizer.zero_grad()
+
+    #     if args.accum_freq == 1:
+    #         with autocast():
+    #             model_out = model(images, texts)
+    #             logit_scale = model_out["logit_scale"]
+    #             losses = loss(**model_out, output_dict=True)
+
+    #             total_loss = sum(losses.values())
+    #             losses["loss"] = total_loss
+
+    #         backward(total_loss, scaler)
+    #     else:
+    #         # First, cache the features without any gradient tracking.
+    #         with torch.no_grad():
+    #             with autocast():
+    #                 model_out = model(images, texts)
+
+    #                 for f in ("logit_scale", "logit_bias"):
+    #                     model_out.pop(f, None)
+
+    #                 for key, val in model_out.items():
+    #                     if key in accum_features:
+    #                         accum_features[key].append(val)
+    #                     else:
+    #                         accum_features[key] = [val]
+
+    #             accum_images.append(images)
+    #             accum_texts.append(texts)
+
+    #         # If (i + 1) % accum_freq is not zero, move on to the next batch.
+    #         if ((i + 1) % args.accum_freq) > 0:
+    #             # FIXME this makes data time logging unreliable when accumulating
+    #             continue
+
+    #         # Now, ready to take gradients for the last accum_freq batches.
+    #         # Re-do the forward pass for those batches, and use the cached features from the other batches as negatives.
+    #         # Call backwards each time, but only step optimizer at the end.
+    #         optimizer.zero_grad()
+    #         for j in range(args.accum_freq):
+    #             images = accum_images[j]
+    #             texts = accum_texts[j]
+    #             with autocast():
+    #                 model_out = model(images, texts)
+
+    #                 inputs_no_accum = {}
+    #                 inputs_no_accum["logit_scale"] = logit_scale = model_out.pop("logit_scale")
+    #                 if "logit_bias" in model_out:
+    #                     inputs_no_accum["logit_bias"] = model_out.pop("logit_bias")
+
+    #                 inputs = {}
+    #                 for key, val in accum_features.items():
+    #                     accumulated = accum_features[key]
+    #                     inputs[key] = torch.cat(accumulated[:j] + [model_out[key]] + accumulated[j + 1:])
+
+    #                 losses = loss(**inputs, **inputs_no_accum, output_dict=True)
+    #                 del inputs
+    #                 del inputs_no_accum
+    #                 total_loss = sum(losses.values())
+    #                 losses["loss"] = total_loss
+
+    #             backward(total_loss, scaler)
+
+    #     # if scaler is not None:
+    #     #     if args.horovod:
+    #     #         optimizer.synchronize()
+    #     #         scaler.unscale_(optimizer)
+    #     #         if args.grad_clip_norm is not None:
+    #     #             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm, norm_type=2.0)
+    #     #         with optimizer.skip_synchronize():
+    #     #             scaler.step(optimizer)
+    #     #     else:
+    #     #         if args.grad_clip_norm is not None:
+    #     #             scaler.unscale_(optimizer)
+    #     #             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm, norm_type=2.0)
+    #     #         scaler.step(optimizer)
+    #     #     scaler.update()
+    #     # else:
+    #     #     if args.grad_clip_norm is not None:
+    #     #         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm, norm_type=2.0)
+    #     #     optimizer.step()
+    #     if scaler is not None:
+    #         scaler.scale(total_loss).backward()
+    #         if args.grad_clip_norm is not None:
+    #             scaler.unscale_(optimizer)
+    #             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm, norm_type=2.0)
+            
+    #         scaler.step(optimizer)
+    #         scaler.update()
+    #     elif args.enable_deepspeed:
+    #         model.backward(total_loss)
+    #         model.step()
+    #     else:
+    #         total_loss.backward()
+    #         if args.grad_clip_norm is not None:
+    #             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm, norm_type=2.0)
+    #         optimizer.step()
+
+    #     # reset gradient accum, if enabled
+    #     if args.accum_freq > 1:
+    #         accum_images, accum_texts, accum_features = [], [], {}
+
+    #     # Note: we clamp to 4.6052 = ln(100), as in the original paper.
+    #     with torch.no_grad():
+    #         unwrap_model(model).logit_scale.clamp_(0, math.log(100))
+
+    #     batch_time_m.update(time.time() - end)
+    #     end = time.time()
+    #     batch_count = i_accum + 1
+    #     if is_master(args) and (i_accum % args.log_every_n_steps == 0 or batch_count == num_batches_per_epoch):
+    #         batch_size = len(images)
+    #         num_samples = batch_count * batch_size * args.accum_freq * args.world_size
+    #         samples_per_epoch = dataloader.num_samples
+    #         percent_complete = 100.0 * batch_count / num_batches_per_epoch
+
+    #         # NOTE loss is coarsely sampled, just master node and per log update
+    #         for key, val in losses.items():
+    #             if key not in losses_m:
+    #                 losses_m[key] = AverageMeter()
+    #             losses_m[key].update(val.item(), batch_size)
+
+    #         logit_scale_scalar = logit_scale.item()
+    #         loss_log = " ".join(
+    #             [
+    #                 f"{loss_name.capitalize()}: {loss_m.val:#.5g} ({loss_m.avg:#.5g})" 
+    #                 for loss_name, loss_m in losses_m.items()
+    #             ]
+    #         )
+    #         samples_per_second = args.accum_freq * args.batch_size * args.world_size / batch_time_m.val
+    #         samples_per_second_per_gpu = args.accum_freq * args.batch_size / batch_time_m.val
+    #         logging.info(
+    #             f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
+    #             f"Data (t): {data_time_m.avg:.3f} "
+    #             f"Batch (t): {batch_time_m.avg:.3f}, {samples_per_second:#g}/s, {samples_per_second_per_gpu:#g}/s/gpu "
+    #             f"LR: {optimizer.param_groups[0]['lr']:5f} "
+    #             f"Logit Scale: {logit_scale_scalar:.3f} " + loss_log
+    #         )
+
+    #         # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
+    #         log_data = {
+    #             "data_time": data_time_m.val,
+    #             "batch_time": batch_time_m.val,
+    #             "samples_per_second": samples_per_second,
+    #             "samples_per_second_per_gpu": samples_per_second_per_gpu,
+    #             "scale": logit_scale_scalar,
+    #             "lr": optimizer.param_groups[0]["lr"]
+    #         }            
+    #         log_data.update({name:val.val for name,val in losses_m.items()})
+
+    #         log_data = {"train/" + name: val for name, val in log_data.items()}
+
+    #         if tb_writer is not None:
+    #             for name, val in log_data.items():
+    #                 tb_writer.add_scalar(name, val, step)
+            
+    #         if args.wandb:
+    #             assert wandb is not None, 'Please install wandb.'
+    #             log_data['step'] = step  # for backwards compatibility
+    #             wandb.log(log_data, step=step)
+            
+    #         # resetting batch / data time meters per log window
+    #         batch_time_m.reset()
+    #         data_time_m.reset()
+    # # end for
+
+
     device = torch.device(args.device)
     autocast = get_autocast(args.precision)
     cast_dtype = get_cast_dtype(args.precision)
 
     model.train()
-    clip_loss_funcation = ClipLoss(
-        local_loss=args.local_loss,
-        gather_with_grad=args.gather_with_grad,
-        cache_labels=True,
-        rank=args.rank,
-        world_size=args.world_size,
-        )
+    # clip_loss_funcation = ClipLoss(
+    #     local_loss=args.local_loss,
+    #     gather_with_grad=args.gather_with_grad,
+    #     cache_labels=True,
+    #     rank=args.rank,
+    #     world_size=args.world_size,
+    #     )
     
     # if args.sparc_loss:
     #     sparc_loss_funcation = SPARCLoss()
@@ -96,6 +298,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
     loss_m = AverageMeter()
     loss_clip_m = AverageMeter()
+    loss_coca_m = AverageMeter()
     # if args.sparc_loss:
     #     loss_sparc_m = AverageMeter()
     loss_scaler = AverageMeter()
@@ -122,17 +325,24 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             model.micro_steps = 0
         else:
             optimizer.zero_grad()
-
         with autocast():
-            image_features, text_features, logit_scale = model(images, texts)
-            total_loss, acc = clip_loss_funcation(image_features, text_features, logit_scale)
-            # if args.sparc_loss:
-            #     sparc_loss = sparc_loss_funcation(image_features_local, text_features_local, attn_mask, logit_scale)
-            #     total_loss = 1 * clip_loss + 0.5 * sparc_loss
-            #     sparc_loss = sparc_loss.clone().detach()
-            # else:
-            # total_loss = clip_loss
-            clip_loss = total_loss.clone().detach()
+            # image_features, text_features, logit_scale = model(images, texts)
+            # total_loss, acc = clip_loss_funcation(image_features, text_features, logit_scale)
+            # # if args.sparc_loss:
+            # #     sparc_loss = sparc_loss_funcation(image_features_local, text_features_local, attn_mask, logit_scale)
+            # #     total_loss = 1 * clip_loss + 0.5 * sparc_loss
+            # #     sparc_loss = sparc_loss.clone().detach()
+            # # else:
+            # # total_loss = clip_loss
+            # clip_loss = total_loss.clone().detach()
+            model_out = model(images, texts)
+            logit_scale = model_out["logit_scale"]
+            losses = loss(**model_out, output_dict=True)
+
+            total_loss = sum(losses.values())
+            contrastive_loss = losses["contrastive_loss"]
+            caption_loss = losses["caption_loss"]
+            losses["loss"] = total_loss
 
         loss_list = [torch.zeros_like(total_loss) for _ in range(dist.get_world_size())]
         dist.all_gather(loss_list, total_loss)
@@ -176,7 +386,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
             # NOTE loss is coarsely sampled, just master node and per log update
             loss_m.update(total_loss.item(), batch_size)
-            loss_clip_m.update(clip_loss.item(), batch_size)
+            loss_clip_m.update(contrastive_loss.item(), batch_size)
+            loss_coca_m.update(caption_loss.item(), batch_size)
             # if args.sparc_loss:
             #     loss_sparc_m.update(sparc_loss.item(), batch_size)
 
@@ -192,12 +403,14 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             loss_scaler.update(loss_scale_value, batch_size)
             grad_norm_m.update(grad_nrom, batch_size)
 
-            index_visual, index_text = 0, 0
+            index_visual, index_text, index_text_decoder = 0, 0, 0
             for i, v in enumerate(optimizer.param_groups):
                 if v['group'] == 'visual' and v['lr_scale'] == 1.0:
                     index_visual = i
                 if v['group'] == 'text' and v['lr_scale'] == 1.0:
                     index_text = i
+                if v['group'] == 'text_decoder' and v['lr_scale'] == 1.0:
+                    index_text_decoder = i
 
             # if args.sparc_loss:
             #     logging.info(
@@ -241,14 +454,16 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
                 f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
                 f"Loss(CLIP): {loss_clip_m.val:#.5g} ({loss_clip_m.avg:#.4g}) "
+                f"Loss(CoCa): {loss_coca_m.val:#.5g} ({loss_coca_m.avg:#.4g}) "
                 f"Grad Norm: {grad_norm_m.val:#.5g} ({grad_norm_m.avg:#.4g}) "
                 f"Loss Scaler: {loss_scaler.val:#.5g} ({loss_scaler.avg:#.4g}) "
                 f"LR: {optimizer.param_groups[0]['lr']:5f} "
                 f"LR_visual: {optimizer.param_groups[index_visual]['lr']:5f} "
                 f"LR_text: {optimizer.param_groups[index_text]['lr']:5f} "
+                f"LR_text_decoder: {optimizer.param_groups[index_text_decoder]['lr']:5f} "
                 f"Logit Scale: {logit_scale_scalar:.3f} "
-                f"i2t_acc: {acc['i2t'].item() * 100:.2f} "
-                f"t2i_acc: {acc['t2i'].item() * 100:.2f} "
+                # f"i2t_acc: {acc['i2t'].item() * 100:.2f} "
+                # f"t2i_acc: {acc['t2i'].item() * 100:.2f} "
                 f"Data (t): {data_time_m.avg:.3f} "
                 f"Batch (t): {batch_time_m.avg:.3f}, {args.batch_size*args.world_size / batch_time_m.val:#g}/s"
             )
@@ -256,14 +471,16 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             log_data = {
                 "loss": loss_m.val,
                 "loss_clip": loss_clip_m.val,
+                "loss_coca": loss_coca_m.val,
                 "loss_scaler": loss_scaler.val,
                 "grad_nrom": grad_norm_m.val,
-                "i2t_acc": acc['i2t'].item() * 100,
-                "t2i_acc": acc['t2i'].item() * 100,
+                # "i2t_acc": acc['i2t'].item() * 100,
+                # "t2i_acc": acc['t2i'].item() * 100,
                 "scale":  logit_scale_scalar,
                 "lr": optimizer.param_groups[0]["lr"],
                 "lr_visual": optimizer.param_groups[index_visual]["lr"],
                 "lr_text": optimizer.param_groups[index_text]["lr"],
+                "lr_text_decoder": optimizer.param_groups[index_text_decoder]["lr"],
                 "data_time": data_time_m.val,
                 "batch_time": batch_time_m.val,
                 "samples_per_scond": args.batch_size*args.world_size / batch_time_m.val,
@@ -313,7 +530,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 texts = texts.to(device=device, non_blocking=True)
 
                 with autocast():
-                    image_features, text_features, logit_scale = model(images, texts)
+                    model_out = model(images, texts)
+                    image_features, text_features, logit_scale = model_out["image_features"], model_out["text_features"], model_out["logit_scale"]
                     # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
                     # however, system RAM is easily exceeded and compute time becomes problematic
                     all_image_features.append(image_features.cpu())

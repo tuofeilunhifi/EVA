@@ -439,6 +439,27 @@ class CustomTransformer(nn.Module):
                 q = r(q, k, v, attn_mask=attn_mask)
         return q
 
+class AttentionalPooler(nn.Module):
+    def __init__(
+            self,
+            d_model: int,
+            context_dim: int,
+            n_head: int = 8,
+            n_queries: int = 256,
+            norm_layer: Callable = LayerNorm
+    ):
+        super().__init__()
+        self.query = nn.Parameter(torch.randn(n_queries, d_model))
+        self.attn = nn.MultiheadAttention(d_model, n_head, kdim=context_dim, vdim=context_dim)
+        self.ln_q = norm_layer(d_model)
+        self.ln_k = norm_layer(context_dim)
+
+    def forward(self, x: torch.Tensor):
+        x = self.ln_k(x).permute(1, 0, 2)  # NLD -> LND
+        N = x.shape[1]
+        q = self.ln_q(self.query)
+        out = self.attn(q.unsqueeze(1).expand(-1, N, -1), x, x, need_weights=False)[0]
+        return out.permute(1, 0, 2)  # LND -> NLD
 
 class ResidualAttentionBlock(nn.Module):
     def __init__(
@@ -450,6 +471,7 @@ class ResidualAttentionBlock(nn.Module):
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
             xattn: bool = False,
+            is_cross_attention: bool = False,
     ):
         super().__init__()
 
@@ -459,6 +481,8 @@ class ResidualAttentionBlock(nn.Module):
         else:
             self.attn = nn.MultiheadAttention(d_model, n_head)
         self.ls_1 = LayerScale(d_model, ls_init_value) if ls_init_value is not None else nn.Identity()
+        if is_cross_attention:
+            self.ln_1_kv = norm_layer(d_model)
 
         self.ln_2 = norm_layer(d_model)
         mlp_width = int(d_model * mlp_ratio)
@@ -471,14 +495,40 @@ class ResidualAttentionBlock(nn.Module):
         self.ls_2 = LayerScale(d_model, ls_init_value) if ls_init_value is not None else nn.Identity()
         self.xattn = xattn
 
-    def attention(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
-        attn_mask = attn_mask.to(x.dtype) if attn_mask is not None else None
-        if self.xattn:
-            return self.attn(x, attn_mask=attn_mask)
-        return self.attn(x, x, x, need_weights=False, attn_mask=attn_mask)[0]
+    # def attention(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
+    #     attn_mask = attn_mask.to(x.dtype) if attn_mask is not None else None
+    #     if self.xattn:
+    #         return self.attn(x, attn_mask=attn_mask)
+    #     return self.attn(x, x, x, need_weights=False, attn_mask=attn_mask)[0]
 
-    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
-        x = x + self.ls_1(self.attention(self.ln_1(x), attn_mask=attn_mask))
+    def attention(
+            self,
+            q_x: torch.Tensor,
+            k_x: Optional[torch.Tensor] = None,
+            v_x: Optional[torch.Tensor] = None,
+            attn_mask: Optional[torch.Tensor] = None,
+    ):
+        k_x = k_x if k_x is not None else q_x
+        v_x = v_x if v_x is not None else q_x
+
+        attn_mask = attn_mask.to(q_x.dtype) if attn_mask is not None else None
+        if self.xattn:
+            return self.attn(q_x, attn_mask=attn_mask)
+        return self.attn(
+            q_x, k_x, v_x, need_weights=False, attn_mask=attn_mask
+        )[0]
+
+    def forward(
+            self,
+            q_x: torch.Tensor,
+            k_x: Optional[torch.Tensor] = None,
+            v_x: Optional[torch.Tensor] = None,
+            attn_mask: Optional[torch.Tensor] = None,
+    ):
+        k_x = self.ln_1_kv(k_x) if hasattr(self, "ln_1_kv") and k_x is not None else None
+        v_x = self.ln_1_kv(v_x) if hasattr(self, "ln_1_kv") and v_x is not None else None
+
+        x = q_x + self.ls_1(self.attention(q_x=self.ln_1(q_x), k_x=k_x, v_x=v_x, attn_mask=attn_mask))
         x = x + self.ls_2(self.mlp(self.ln_2(x)))
         return x
 
@@ -506,12 +556,15 @@ class Transformer(nn.Module):
         ])
 
     def get_cast_dtype(self) -> torch.dtype:
+        if hasattr(self.resblocks[0].mlp.c_fc, 'int8_original_dtype'):
+            return self.resblocks[0].mlp.c_fc.int8_original_dtype
         return self.resblocks[0].mlp.c_fc.weight.dtype
 
     def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
         for r in self.resblocks:
             if self.grad_checkpointing and not torch.jit.is_scripting():
-                x = checkpoint(r, x, attn_mask)
+                # TODO: handle kwargs https://github.com/pytorch/pytorch/issues/79887#issuecomment-1161758372
+                x = checkpoint(r, x, None, None, attn_mask)
             else:
                 x = r(x, attn_mask=attn_mask)
         return x
@@ -527,17 +580,24 @@ class VisionTransformer(nn.Module):
             heads: int,
             mlp_ratio: float,
             ls_init_value: float = None,
+            attentional_pool: bool = False,
+            attn_pooler_queries: int = 256,
+            attn_pooler_heads: int = 8,
             patch_dropout: float = 0.,
+            final_ln_after_pool: bool = False,
             global_average_pool: bool = False,
             output_dim: int = 512,
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
             xattn: bool = False,
+            output_tokens: bool = False,
     ):
         super().__init__()
+        self.output_tokens = output_tokens
         self.image_size = to_2tuple(image_size)
         self.patch_size = to_2tuple(patch_size)
         self.grid_size = (self.image_size[0] // self.patch_size[0], self.image_size[1] // self.patch_size[1])
+        self.final_ln_after_pool = final_ln_after_pool  # currently ignored w/ attn pool enabled
         self.output_dim = output_dim
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=width, kernel_size=patch_size, stride=patch_size, bias=False)
 
@@ -559,10 +619,45 @@ class VisionTransformer(nn.Module):
             norm_layer=norm_layer,
             xattn=xattn
         )
+        
+        if attentional_pool:
+            if isinstance(attentional_pool, str):
+                self.attn_pool_type = attentional_pool
+                self.pool_type = 'none'
+                if attentional_pool in ('parallel', 'cascade'):
+                    self.attn_pool = AttentionalPooler(
+                        output_dim,
+                        width,
+                        n_head=attn_pooler_heads,
+                        n_queries=attn_pooler_queries,
+                    )
+                    self.attn_pool_contrastive = AttentionalPooler(
+                        output_dim,
+                        width,
+                        n_head=attn_pooler_heads,
+                        n_queries=1,
+                    )
+                else:
+                    assert False
+            else:
+                self.attn_pool_type = ''
+                self.pool_type = pool_type
+                self.attn_pool = AttentionalPooler(
+                    output_dim,
+                    width,
+                    n_head=attn_pooler_heads,
+                    n_queries=attn_pooler_queries,
+                )
+                self.attn_pool_contrastive = None
+            pool_dim = output_dim
+        else:
+            self.attn_pool = None
+            pool_dim = width
+            self.pool_type = pool_type
 
         self.global_average_pool = global_average_pool
         self.ln_post = norm_layer(width)
-        self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
+        self.proj = nn.Parameter(scale * torch.randn(pool_dim, output_dim))
 
     def lock(self, unlocked_groups=0, freeze_bn_stats=False):
         for param in self.parameters():
@@ -625,19 +720,62 @@ class VisionTransformer(nn.Module):
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
 
-        if not return_all_features:
-            if self.global_average_pool:
-                x = x.mean(dim=1) #x = x[:,1:,:].mean(dim=1)
+        # if not return_all_features:
+        #     if self.global_average_pool:
+        #         x = x.mean(dim=1) #x = x[:,1:,:].mean(dim=1)
+        #     else:
+        #         x = x[:, 0]
+
+        #     x = self.ln_post(x)
+
+        #     if self.proj is not None:
+        #         x = x @ self.proj
+
+        # return x
+
+        if self.attn_pool is not None:
+            if self.attn_pool_contrastive is not None:
+                # This is untested, WIP pooling that should match paper
+                x = self.ln_post(x)  # TBD LN first or separate one after each pool?
+                tokens = self.attn_pool(x)
+                if self.attn_pool_type == 'parallel':
+                    pooled = self.attn_pool_contrastive(x)
+                else:
+                    assert self.attn_pool_type == 'cascade'
+                    pooled = self.attn_pool_contrastive(tokens)
             else:
-                x = x[:, 0]
-
+                # this is the original OpenCLIP CoCa setup, does not match paper
+                x = self.attn_pool(x)
+                x = self.ln_post(x)
+                pooled, tokens = self._global_pool(x)
+        elif self.final_ln_after_pool:
+            pooled, tokens = self._global_pool(x)
+            pooled = self.ln_post(pooled)
+        else:
             x = self.ln_post(x)
+            pooled, tokens = self._global_pool(x)
 
-            if self.proj is not None:
-                x = x @ self.proj
+        if self.proj is not None:
+            pooled = pooled @ self.proj
 
-        return x
+        if self.output_tokens:
+            return pooled, tokens
+        
+        return pooled
 
+def text_global_pool(x, text: Optional[torch.Tensor] = None, pool_type: str = 'argmax'):
+    if pool_type == 'first':
+        pooled, tokens = x[:, 0], x[:, 1:]
+    elif pool_type == 'last':
+        pooled, tokens = x[:, -1], x[:, :-1]
+    elif pool_type == 'argmax':
+        # take features from the eot embedding (eot_token is the highest number in each sequence)
+        assert text is not None
+        pooled, tokens = x[torch.arange(x.shape[0]), text.argmax(dim=-1)], x
+    else:
+        pooled = tokens = x
+
+    return pooled, tokens
 
 class TextTransformer(nn.Module):
     def __init__(
@@ -647,25 +785,40 @@ class TextTransformer(nn.Module):
             width: int = 512,
             heads: int = 8,
             layers: int = 12,
+            mlp_ratio: float = 4.0,
             ls_init_value: float = None,
             output_dim: int = 512,
+            embed_cls: bool = False,
+            no_causal_mask: bool = False,
+            pad_id: int = 0,
+            pool_type: str = 'argmax',
+            proj_bias: bool = False,
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
             xattn: bool= False,
-            attn_mask: bool = True
+            attn_mask: bool = True,
+            output_tokens: bool = False,
     ):
         super().__init__()
+        self.output_tokens = output_tokens
         self.context_length = context_length
         self.vocab_size = vocab_size
         self.width = width
         self.output_dim = output_dim
+        self.pool_type = pool_type
 
         self.token_embedding = nn.Embedding(vocab_size, width)
+        if embed_cls:
+            self.cls_emb = nn.Parameter(torch.empty(width))
+            self.num_pos += 1
+        else:
+            self.cls_emb = None
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, width))
         self.transformer = Transformer(
             width=width,
             layers=layers,
             heads=heads,
+            mlp_ratio=mlp_ratio,
             ls_init_value=ls_init_value,
             act_layer=act_layer,
             norm_layer=norm_layer,
@@ -688,6 +841,8 @@ class TextTransformer(nn.Module):
     def init_parameters(self):
         nn.init.normal_(self.token_embedding.weight, std=0.02)
         nn.init.normal_(self.positional_embedding, std=0.01)
+        if self.cls_emb is not None:
+            nn.init.normal_(self.cls_emb, std=0.01)
 
         proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
         attn_std = self.transformer.width ** -0.5
@@ -730,10 +885,129 @@ class TextTransformer(nn.Module):
         x = self.transformer(x, attn_mask=self.attn_mask)
         # x = self.transformer(x) # no attention mask is applied
         x = x.permute(1, 0, 2)  # LND -> NLD
+        # x = self.ln_final(x)
+
+        # if not return_all_features:
+        #     # x.shape = [batch_size, n_ctx, transformer.width]
+        #     # take features from the eot embedding (eot_token is the highest number in each sequence)
+        #     x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+        # return x
+        # x.shape = [batch_size, n_ctx, transformer.width]
+        if self.cls_emb is not None:
+            # presence of appended cls embed (CoCa) overrides pool_type, always take last token
+            pooled, tokens = text_global_pool(x, pool_type='last')
+            pooled = self.ln_final(pooled)  # final LN applied after pooling in this case
+        else:
+            x = self.ln_final(x)
+            pooled, tokens = text_global_pool(x, text, pool_type=self.pool_type)
+
+        if self.text_projection is not None:
+            if isinstance(self.text_projection, nn.Linear):
+                pooled = self.text_projection(pooled)
+            else:
+                pooled = pooled @ self.text_projection
+
+        if self.output_tokens:
+            return pooled, tokens
+
+        return pooled
+
+class MultimodalTransformer(Transformer):
+    def __init__(
+            self,
+            width: int,
+            layers: int,
+            heads: int,
+            context_length: int = 77,
+            mlp_ratio: float = 4.0,
+            ls_init_value: float = None,
+            act_layer: Callable = nn.GELU,
+            norm_layer: Callable = LayerNorm,
+            output_dim: int = 512,
+            xattn: bool= False,
+    ):
+
+        super().__init__(
+            width=width,
+            layers=layers,
+            heads=heads,
+            mlp_ratio=mlp_ratio,
+            ls_init_value=ls_init_value,
+            act_layer=act_layer,
+            norm_layer=norm_layer,
+            xattn=xattn
+        )
+        self.context_length = context_length
+        self.cross_attn = nn.ModuleList([
+            ResidualAttentionBlock(
+                width,
+                heads,
+                mlp_ratio,
+                ls_init_value=ls_init_value,
+                act_layer=act_layer,
+                norm_layer=norm_layer,
+                xattn=xattn,
+                is_cross_attention=True,
+            )
+            for _ in range(layers)
+        ])
+
+        self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
+
+        self.ln_final = norm_layer(width)
+        self.text_projection = nn.Parameter(torch.empty(width, output_dim))
+
+    def init_parameters(self):
+        proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
+        attn_std = self.transformer.width ** -0.5
+        fc_std = (2 * self.transformer.width) ** -0.5
+        for block in self.transformer.resblocks:
+            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
+            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
+            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
+            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+        for block in self.transformer.cross_attn:
+            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
+            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
+            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
+            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+
+        if self.text_projection is not None:
+            nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
+
+    def get_num_layers(self):
+        return len(self.cross_attn)
+
+    def build_attention_mask(self):
+        # lazily create causal attention mask, with full attention between the tokens
+        # pytorch uses additive attention mask; fill with -inf
+        mask = torch.empty(self.context_length, self.context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # zero out the lower diagonal
+        return mask
+
+    def forward(self, image_embs, text_embs):
+        text_embs = text_embs.permute(1, 0, 2)  # NLD -> LNDsq
+        image_embs = image_embs.permute(1, 0, 2)  # NLD -> LND
+        seq_len = text_embs.shape[0]
+
+        for resblock, cross_attn in zip(self.resblocks, self.cross_attn):
+            if self.grad_checkpointing and not torch.jit.is_scripting():
+                # TODO: handle kwargs https://github.com/pytorch/pytorch/issues/79887#issuecomment-1161758372
+                text_embs = checkpoint(resblock, text_embs, None, None, self.attn_mask[:seq_len, :seq_len])
+                text_embs = checkpoint(cross_attn, text_embs, image_embs, image_embs, None)
+            else:
+                text_embs = resblock(text_embs, attn_mask=self.attn_mask[:seq_len, :seq_len])
+                text_embs = cross_attn(text_embs, k_x=image_embs, v_x=image_embs)
+
+        x = text_embs.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
 
-        if not return_all_features:
-            # x.shape = [batch_size, n_ctx, transformer.width]
-            # take features from the eot embedding (eot_token is the highest number in each sequence)
-            x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+        if self.text_projection is not None:
+            x = x @ self.text_projection
+
         return x
+
+    @torch.jit.ignore
+    def set_grad_checkpointing(self, enable=True):
+        self.grad_checkpointing = enable
