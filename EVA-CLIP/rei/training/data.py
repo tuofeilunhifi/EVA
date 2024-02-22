@@ -631,12 +631,22 @@ class JsonDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
         logging.debug(f'Loading json data from {input_filename}.')
         self.images, self.captions = [], []
-        with open(input_filename, 'r', encoding="utf-8") as file:
-            objects = ijson.items(file, "item")  # find item_ids and its user_ids
-            for item in objects:
-                # if os.path.exists(item['image']):
-                self.images.append(item['image'])
-                self.captions.append(item['caption'])
+        if ".json" not in input_filename and ".jsonl" not in input_filename:
+            source_json_list = []
+            for x in os.walk(input_filename):
+                cur_json_list = [os.path.join(x[0], target) for target in x[2] if ('.jsonl' in target or '.json' in target)]
+                if len(cur_json_list) > 0:
+                    source_json_list.extend(cur_json_list)
+            input_filename = source_json_list
+        if isinstance(input_filename, str):
+            input_filename = [input_filename]
+        for filename in input_filename:
+            with open(filename, 'r', encoding="utf-8") as file:
+                objects = ijson.items(file, "item")  # find item_ids and its user_ids
+                for item in objects:
+                    # if os.path.exists(item['image']):
+                    self.images.append(item['image'])
+                    self.captions.append(item['caption'])
         self.length = len(self.images)
 
         self.transforms = transforms

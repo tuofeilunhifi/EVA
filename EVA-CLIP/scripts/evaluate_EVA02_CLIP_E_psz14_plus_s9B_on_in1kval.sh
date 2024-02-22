@@ -3,7 +3,8 @@ cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
 MODEL_NAME=EVA02-CLIP-bigE-14-plus
 
-PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_CLIP_E_psz14_plus_s9B.pt
+# PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_CLIP_E_psz14_plus_s9B.pt
+PRETRAINED=/workspace/codebase/EVA/EVA-CLIP/rei/logs/2024_01_26-15_55_50-model_EVA02-CLIP-bigE-14-plus-lr_0.0005-b_900-j_8-p_amp/checkpoints/pytorch_model.bin
 # can set PRETRAINED=eva to automaticaly download and load weights; please check details in pretrained.py
 # PRETRAINED=eva_clip
 

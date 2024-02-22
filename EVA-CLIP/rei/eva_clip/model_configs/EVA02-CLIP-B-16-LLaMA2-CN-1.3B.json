@@ -18,13 +18,13 @@
         "subln": true
     },
     "text_cfg": {
-        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-7b/snapshots/c40cf9ac38b789d542b582f842a9f62511fa3bf1",
-        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-7b/snapshots/c40cf9ac38b789d542b582f842a9f62511fa3bf1",
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
+        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
         "context_length": 77,
         "vocab_size": 55296,
         "width": 4096,
         "heads": 32,
-        "layers": 32,
+        "layers": 4,
         "xattn": true,
         "fusedLN": true
     }

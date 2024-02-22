@@ -6,10 +6,12 @@ from tqdm import tqdm
 
 from eva_clip import get_cast_dtype, get_tokenizer
 from .precision import get_autocast
-from .imagenet_zeroshot_data import imagenet_classnames, openai_imagenet_template
+from .imagenet_zeroshot_data import imagenet_classnames, openai_imagenet_template, imagenet_chinese_classnames
 
 
 def zero_shot_classifier(model, classnames, templates, args):
+    if isinstance(classnames, dict):
+        classnames = list(classnames.values())
     tokenizer = get_tokenizer(args.model)
     with torch.no_grad():
         zeroshot_weights = []
@@ -75,7 +77,13 @@ def zero_shot_eval(model, data, epoch, args):
     logging.info('Starting zero-shot imagenet.')
 
     logging.info('Building zero-shot classifier')
-    classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
+    if args.in1k_chinese_classnames:
+        logging.info('Chinese classnames')
+        classnames = imagenet_chinese_classnames
+    else:
+        logging.info('English classnames')
+        classnames = imagenet_classnames
+    classifier = zero_shot_classifier(model, classnames, openai_imagenet_template, args)
 
     logging.info('Using classifier')
     results = {}
