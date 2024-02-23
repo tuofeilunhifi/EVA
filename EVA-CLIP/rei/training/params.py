@@ -458,12 +458,8 @@ def parse_args(args):
         help="Step interval to store embeddings",
     )
     parser.add_argument('--enable_deepspeed', action='store_true', default=False)
-    parser.add_argument(
-        "--in1k_chinese_classnames",
-        action="store_true",
-        default=False,
-        help="in1k use chinese classnames.",
-    )
+    parser.add_argument('--language', default='en', type=str,
+                             help='language(s) of classname and prompts to use for zeroshot classification.')
 
     args = parser.parse_args(args)
 

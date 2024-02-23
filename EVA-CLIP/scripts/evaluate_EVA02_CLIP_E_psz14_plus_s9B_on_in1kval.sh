@@ -15,4 +15,5 @@ torchrun --nproc_per_node=1 --nnodes=1 training/main.py \
         --model ${MODEL_NAME} \
         --pretrained ${PRETRAINED} \
         --force-custom-clip \
-        --enable_deepspeed
+        --enable_deepspeed \
+        # --language="cn" \

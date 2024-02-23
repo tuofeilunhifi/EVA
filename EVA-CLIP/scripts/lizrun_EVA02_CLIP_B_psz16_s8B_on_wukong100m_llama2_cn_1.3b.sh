@@ -17,6 +17,9 @@
 # export NCCL_IB_HCA=^mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7,mlx5_8
 # export NCCL_SOCKET_IFNAME=eth1,eth2,eth3,eth4,eth5,eth6,eth7,eth8
 export NCCL_IB_GID_INDEX=3
+export NCCL_IB_TIMEOUT=22
+export NCCL_IB_RETRY_CNT=13
+# export NCCL_ASYNC_ERROR_HANDLING=1
 ### RDMA Config ###
 
 # 简单镜像依赖添加
@@ -32,6 +35,9 @@ cd temp/apex-${RANK}
 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
 
 pip install xformers==0.0.22 --index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+cp -r /mnt/pfs-guan-ssai/cv/cjy/envs/adt ./
+sudo ./adt --token 1852d6b5acf8a1b50a88ac75c3a95136 mountbos
 
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
@@ -69,7 +75,8 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
-WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
+WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -84,7 +91,7 @@ torchrun --nnodes=${WORLD_SIZE} \
     training/main.py \
         --save-frequency 10 \
         --zeroshot-frequency 1 \
-        --report-to="tensorboard" \
+        --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
         --wandb-notes="eva02_clip_B_16" \
         --train-num-samples 40000000 \
@@ -122,5 +129,5 @@ torchrun --nnodes=${WORLD_SIZE} \
         --optimizer="lamb" \
         --zero-stage=1 \
         --enable-deepspeed \
-        --in1k_chinese_classnames \
+        --language="cn" \
         # --precision="amp_bf16" \

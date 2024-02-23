@@ -641,6 +641,7 @@ class JsonDataset(Dataset):
         if isinstance(input_filename, str):
             input_filename = [input_filename]
         for filename in input_filename:
+            print(filename)
             with open(filename, 'r', encoding="utf-8") as file:
                 objects = ijson.items(file, "item")  # find item_ids and its user_ids
                 for item in objects:

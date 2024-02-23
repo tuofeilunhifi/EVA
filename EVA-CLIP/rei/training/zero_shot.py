@@ -1,22 +1,21 @@
 import logging
 
+import os
+import json
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
 from eva_clip import get_cast_dtype, get_tokenizer
 from .precision import get_autocast
-from .imagenet_zeroshot_data import imagenet_classnames, openai_imagenet_template, imagenet_chinese_classnames
 
 
 def zero_shot_classifier(model, classnames, templates, args):
-    if isinstance(classnames, dict):
-        classnames = list(classnames.values())
     tokenizer = get_tokenizer(args.model)
     with torch.no_grad():
         zeroshot_weights = []
         for classname in tqdm(classnames):
-            texts = [template(classname) for template in templates]  # format with class
+            texts = [template.format(c=classname) for template in templates]  # format with class
             texts = tokenizer(texts).to(args.device)  # tokenize
             if args.distributed:
                 class_embeddings = model.module.encode_text(texts)
@@ -65,6 +64,26 @@ def run(model, classifier, dataloader, args):
     top5 = (top5 / n)
     return top1, top5
 
+def _load_classnames_and_classification_templates(dataset_name, current_folder, language):
+    with open(os.path.join(current_folder, language + '_classnames.json'), 'r') as f:
+        class_names = json.load(f)
+    DEFAULT_CLASSNAMES = class_names['imagenet1k']
+    classnames = class_names.get(dataset_name, DEFAULT_CLASSNAMES)
+
+    # Zero-shot classification templates, collected from a bunch of sources
+    # - CLIP paper (https://github.com/openai/CLIP/blob/main/data/prompts.md)
+    # - Lit Paper (https://arxiv.org/pdf/2111.07991.pdf)
+    # - SLIP paper (https://github.com/facebookresearch/SLIP/blob/main/templates.json)
+    # Some are fixed mnaually
+
+    with open(os.path.join(current_folder, language + '_zeroshot_classification_templates.json'), 'r') as f:
+        zeroshot_classification_templates = json.load(f)
+    # default template to use when the dataset name does not belong to `zeroshot_classification_templates`
+    DEFAULT_ZEROSHOT_CLASSIFICATION_TEMPLATES = zeroshot_classification_templates['imagenet1k']
+
+    templates = zeroshot_classification_templates.get(dataset_name, DEFAULT_ZEROSHOT_CLASSIFICATION_TEMPLATES)
+    return classnames, templates
+
 
 def zero_shot_eval(model, data, epoch, args):
     if 'imagenet-val' not in data and 'imagenet-v2' not in data:
@@ -77,13 +96,11 @@ def zero_shot_eval(model, data, epoch, args):
     logging.info('Starting zero-shot imagenet.')
 
     logging.info('Building zero-shot classifier')
-    if args.in1k_chinese_classnames:
-        logging.info('Chinese classnames')
-        classnames = imagenet_chinese_classnames
-    else:
-        logging.info('English classnames')
-        classnames = imagenet_classnames
-    classifier = zero_shot_classifier(model, classnames, openai_imagenet_template, args)
+
+    dataset_name = "imagenet1k"
+    current_folder = os.path.join(os.path.dirname(__file__), 'datasets')
+    classnames, templates = _load_classnames_and_classification_templates(dataset_name, current_folder, args.language)
+    classifier = zero_shot_classifier(model, classnames, templates, args)
 
     logging.info('Using classifier')
     results = {}

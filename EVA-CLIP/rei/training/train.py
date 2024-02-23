@@ -23,6 +23,7 @@ from .zero_shot import zero_shot_eval
 from .precision import get_autocast
 from .utils import save_file
 
+wandb.login(key="3ad3834bcdc92e738553f9f7fd7fe85880e29fc2")
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
