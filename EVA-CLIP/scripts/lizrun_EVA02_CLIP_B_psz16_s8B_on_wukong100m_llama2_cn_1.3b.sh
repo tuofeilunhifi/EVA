@@ -29,9 +29,10 @@ pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https
 pip install -r requirements.txt
 
 cd /mnt/pfs-guan-ssai/cv/cjy/envs/
-mkdir temp
-cp -r /mnt/pfs-guan-ssai/cv/cjy/codebase/apex temp/apex-${RANK}
-cd temp/apex-${RANK}
+TIME=`date "+%Y%m%d-%H%M%S"`
+mkdir temp-${TIME}
+cp -r /mnt/pfs-guan-ssai/cv/cjy/codebase/apex temp-${TIME}/apex-${RANK}
+cd temp-${TIME}/apex-${RANK}
 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
 
 pip install xformers==0.0.22 --index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
@@ -76,7 +77,8 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
-WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
+WUKONG_100M_DATA_PATH="/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/recipe_file/wukong-100m-part-{0..15}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -97,7 +99,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --train-num-samples 40000000 \
         --dataset-resampled \
         --train-data=${WUKONG_100M_DATA_PATH} \
-        --dataset-type="json" \
+        --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
         --batch-size=2048 \

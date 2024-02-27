@@ -29,9 +29,10 @@ pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https
 pip install -r requirements.txt
 
 cd /mnt/pfs-guan-ssai/cv/cjy/envs/
-mkdir temp
-cp -r /mnt/pfs-guan-ssai/cv/cjy/codebase/apex temp/apex-${RANK}
-cd temp/apex-${RANK}
+TIME=`date "+%Y%m%d-%H%M%S"`
+mkdir temp-${TIME}
+cp -r /mnt/pfs-guan-ssai/cv/cjy/codebase/apex temp-${TIME}/apex-${RANK}
+cd temp-${TIME}/apex-${RANK}
 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
 
 pip install xformers==0.0.22 --index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
