@@ -60,9 +60,9 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-B-16-LLaMA2-CN-1.3B
+MODEL=EVA02-CLIP-B-16
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_B_psz14to16.pt
-PRETRAINED_TEXT=''
+PRETRAINED_TEXT=/mnt/pfs-guan-ssai/cv/cjy/models/clip/ViT-B-16.pt
 PRETRAINED_VISUAL_MODEL=EVA02-B-16
 PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 
@@ -105,8 +105,8 @@ torchrun --nnodes=${WORLD_SIZE} \
         --batch-size=2048 \
         --epochs=200 \
         --lr=5e-4 \
-        --visual-lr=4e-4 \
-        --text-lr=4e-5 \
+        --visual-lr=2e-4 \
+        --text-lr=2e-5 \
         --wd=0.05 \
         --visual-wd=0.05 \
         --text-wd=0.05 \
