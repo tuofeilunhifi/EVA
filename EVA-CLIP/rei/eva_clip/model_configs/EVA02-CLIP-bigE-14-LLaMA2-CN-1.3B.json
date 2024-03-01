@@ -1,0 +1,27 @@
+{
+    "embed_dim": 1024,
+    "vision_cfg": {
+        "image_size": 224,
+        "layers": 64,
+        "width": 1792,
+        "head_width": 112,
+        "mlp_ratio": 8.571428571428571,
+        "patch_size": 14,
+        "eva_model_name": "eva-clip-4b-14-x",
+        "drop_path_rate": 0,
+        "xattn": true,
+        "postnorm": true,
+        "fusedLN": true
+    },
+    "text_cfg": {
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
+        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
+        "context_length": 77,
+        "vocab_size": 55296,
+        "width": 4096,
+        "heads": 32,
+        "layers": 4,
+        "xattn": true,
+        "fusedLN": true
+    }
+}

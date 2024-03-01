@@ -21,7 +21,7 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
-WUKONG_100M_DATA_PATH="/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/recipe_file/wukong-100m-part-{0..0}.tar"
+MERGE_500M_DATA_PATH="/mnt/pfs-guan-ssai/cv/cjy/data/laion2B-en/{00002..00002}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -36,7 +36,7 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --wandb-notes="eva02_clip_B_16" \
         --train-num-samples 40000000 \
         --dataset-resampled \
-        --train-data=${WUKONG_100M_DATA_PATH} \
+        --train-data=${MERGE_500M_DATA_PATH} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \

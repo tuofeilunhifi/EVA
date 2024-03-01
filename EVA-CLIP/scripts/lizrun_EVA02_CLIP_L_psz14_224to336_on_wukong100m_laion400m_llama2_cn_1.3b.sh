@@ -60,11 +60,11 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-B-16-LLaMA2-CN-1.3B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_B_psz14to16.pt
-PRETRAINED_TEXT=''
-PRETRAINED_VISUAL_MODEL=EVA02-B-16
-PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
+MODEL=EVA02-CLIP-L-14-336-LLaMA2-CN-1.3B
+PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_CLIP_L_psz14_224to336_LLaMA1_3B.pt
+# PRETRAINED_TEXT=''
+# PRETRAINED_VISUAL_MODEL=EVA02-L-14
+# PRETRAINED_TEXT_MODEL=OpenaiCLIP-L-14
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -76,14 +76,16 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
-# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
-WUKONG_100M_DATA_PATH="/mnt/pfs-guan-ssai/cv/cjy/data/laion2B-en/json/;/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json"
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
+MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
 #        	--nnodes=$WORLD_SIZE --node_rank=$RANK \
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
-# torchrun --nproc_per_node=8 --nnodes=1 \
+# train-num-samples-list 30000000 10000000
 torchrun --nnodes=${WORLD_SIZE} \
   --nproc_per_node=8 \
   --rdzv_id=100 \
@@ -94,32 +96,29 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zeroshot-frequency 1 \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
-        --wandb-notes="eva02_clip_B_16" \
-        --train-num-samples-list 32000000 8000000 \
+        --wandb-notes="eva02_clip_L_14_336" \
+        --train-num-samples 40000000 \
         --dataset-resampled \
-        --train-data-list=${WUKONG_100M_DATA_PATH} \
-        --dataset-type-list="json;json" \
+        --train-data-list=${MERGE_500M_DATA_PATH} \
+        --dataset-type-list="webdataset;webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=2048 \
-        --epochs=200 \
+        --batch-size=480 \
+        --epochs=50 \
         --lr=5e-4 \
-        --visual-lr=2e-3 \
-        --text-lr=2e-4 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
         --wd=0.05 \
         --visual-wd=0.05 \
         --text-wd=0.05 \
         --ld=1.0 \
         --visual-ld=0.75 \
-        --text-ld=0.75 \
+        --text-ld=0.65 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
         --workers=8 \
         --model=${MODEL} \
-        --pretrained-image=${PRETRAINED_IMAGE} \
-        --pretrained-text=${PRETRAINED_TEXT} \
-        --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
-        --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
+        --pretrained=${PRETRAINED} \
         --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token text_projection logit_scale \
         --seed 4096 \
         --gather-with-grad \
