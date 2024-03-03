@@ -293,5 +293,5 @@ class HFTextEncoder(nn.Module):
 
     def get_num_layers(self):
         encoder = self.transformer.encoder if hasattr(self.transformer, 'encoder') else self.transformer
-        layer_list = getattr(encoder, arch_dict["bert"]["config_names"]["layer_attr"])
+        layer_list = getattr(encoder, arch_dict["xlm-roberta"]["config_names"]["layer_attr"])
         return len(layer_list)

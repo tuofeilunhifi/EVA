@@ -11,6 +11,7 @@ from typing import Union, List
 import ftfy
 import regex as re
 import torch
+# import open_clip
 
 # https://stackoverflow.com/q/62691279
 import os
@@ -189,7 +190,8 @@ class HFTokenizer:
     "HuggingFace tokenizer wrapper"
     def __init__(self, tokenizer_name:str):
         from transformers import AutoTokenizer, LlamaTokenizer
-        self.tokenizer = LlamaTokenizer.from_pretrained(tokenizer_name)
+        # self.tokenizer = LlamaTokenizer.from_pretrained(tokenizer_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.unk_token
 
