@@ -18,15 +18,14 @@
         "subln": true
     },
     "text_cfg": {
-        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
-        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
         "context_length": 77,
+        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
         "vocab_size": 55296,
         "eos_token_id": 32000,
-        "width": 4096,
-        "heads": 32,
-        "layers": 4,
-        "xattn": true,
+        "width": 768,
+        "heads": 12,
+        "layers": 12,
+        "xattn": false,
         "fusedLN": true
     }
 }

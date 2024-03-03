@@ -652,13 +652,15 @@ class TextTransformer(nn.Module):
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
             xattn: bool= False,
-            attn_mask: bool = True
+            attn_mask: bool = True,
+            eos_token_id: int = 49407,
     ):
         super().__init__()
         self.context_length = context_length
         self.vocab_size = vocab_size
         self.width = width
         self.output_dim = output_dim
+        self.eos_token_id = eos_token_id
 
         self.token_embedding = nn.Embedding(vocab_size, width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, width))
@@ -680,8 +682,6 @@ class TextTransformer(nn.Module):
             self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
         else:
             self.attn_mask = None
-
-        self.pad_token_id = 0
 
         self.init_parameters()
 
@@ -735,5 +735,6 @@ class TextTransformer(nn.Module):
         if not return_all_features:
             # x.shape = [batch_size, n_ctx, transformer.width]
             # take features from the eot embedding (eot_token is the highest number in each sequence)
-            x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+            # x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+            x = x[torch.arange(x.shape[0]), (text == self.eos_token_id).int().argmax(dim=-1)] @ self.text_projection
         return x

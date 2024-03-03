@@ -95,25 +95,28 @@ def zero_shot_eval(model, data, epoch, args):
 
     logging.info('Starting zero-shot imagenet.')
 
-    logging.info('Building zero-shot classifier')
+    # logging.info('Building zero-shot classifier')
 
     dataset_name = "imagenet1k"
     current_folder = os.path.join(os.path.dirname(__file__), 'datasets')
-    classnames, templates = _load_classnames_and_classification_templates(dataset_name, current_folder, args.language)
-    classifier = zero_shot_classifier(model, classnames, templates, args)
-
-    logging.info('Using classifier')
+    language_list = ["en", "cn"]
     results = {}
-    if 'imagenet-val' in data:
-        top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
-        results['epoch'] = int(epoch)
-        results['imagenet-zeroshot-val-top1'] = top1
-        results['imagenet-zeroshot-val-top5'] = top5
-    if 'imagenet-v2' in data:
-        top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
-        results['epoch'] = int(epoch)
-        results['imagenetv2-zeroshot-val-top1'] = top1
-        results['imagenetv2-zeroshot-val-top5'] = top5
+    for language in language_list:
+        logging.info(f'Building zero-shot classifier {language}')
+        classnames, templates = _load_classnames_and_classification_templates(dataset_name, current_folder, language)
+        classifier = zero_shot_classifier(model, classnames, templates, args)
+
+        logging.info(f'Using classifier {language}')
+        if 'imagenet-val' in data:
+            top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
+            results['epoch'] = int(epoch)
+            results[f'imagenet-zeroshot-val-top1-{language}'] = top1
+            results[f'imagenet-zeroshot-val-top5-{language}'] = top5
+        if 'imagenet-v2' in data:
+            top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
+            results['epoch'] = int(epoch)
+            results[f'imagenetv2-zeroshot-val-top1-{language}'] = top1
+            results[f'imagenetv2-zeroshot-val-top5-{language}'] = top5
 
     logging.info('Finished zero-shot imagenet.')
 

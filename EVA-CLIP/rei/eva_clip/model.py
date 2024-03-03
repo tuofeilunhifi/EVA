@@ -79,6 +79,7 @@ class CLIPTextCfg:
     fusedLN: bool = False
     xattn: bool = False
     attn_mask: bool = True
+    eos_token_id: int = 49407
 
 def get_cast_dtype(precision: str):
     cast_dtype = None
@@ -204,6 +205,7 @@ def _build_text_tower(
             norm_layer= FusedLayerNorm if text_cfg.fusedLN else norm_layer,
             xattn=text_cfg.xattn,
             attn_mask=text_cfg.attn_mask,
+            eos_token_id=text_cfg.eos_token_id,
         )
     return text
 

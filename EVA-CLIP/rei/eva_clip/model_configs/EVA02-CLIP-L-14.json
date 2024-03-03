@@ -20,6 +20,7 @@
     "text_cfg": {
         "context_length": 77,
         "vocab_size": 49408,
+        "eos_token_id": 49407,
         "width": 768,
         "heads": 12,
         "layers": 12,
