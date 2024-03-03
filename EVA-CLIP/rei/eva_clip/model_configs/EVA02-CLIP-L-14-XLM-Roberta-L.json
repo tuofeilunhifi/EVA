@@ -18,8 +18,8 @@
         "subln": true
     },
     "text_cfg": {
-        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
-        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--hfl--chinese-llama-2-1.3b/snapshots/99f0fa34dfcdcd1497efdcefce45712cd9fed9ea",
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-H-14-frozen-xlm-roberta-large-laion5B-s13B-b90k/snapshots/f9ab955287d06ac45c7654f26fecd29301c70a1f",
+        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--laion--CLIP-ViT-H-14-frozen-xlm-roberta-large-laion5B-s13B-b90k/snapshots/f9ab955287d06ac45c7654f26fecd29301c70a1f",
         "pooler_type": "mean_pooler",
         "proj": "mlp",
         "context_length": 77,

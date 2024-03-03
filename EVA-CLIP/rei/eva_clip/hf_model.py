@@ -122,13 +122,25 @@ class HFTextEncoder(nn.Module):
         # if pooler_type is None: # get default arch pooler
         #     self.pooler = _POOLERS[(arch_dict[self.config.model_type]["pooler"])]()
         # else:
-        #     self.pooler = _POOLERS[pooler_type]()
+        self.pooler = _POOLERS[pooler_type]()
         self.width = getattr(self.config, arch_dict["llama"]["config_names"]["width"])
-        self.text_projection = nn.Parameter(torch.empty(self.width, output_dim))
+        # self.text_projection = nn.Parameter(torch.empty(self.width, output_dim))
+        if (self.width == output_dim) and (proj is None):  # do we always need a proj?
+            self.proj = nn.Identity()
+        elif proj == 'linear':
+            self.proj = nn.Linear(self.width, output_dim, bias=False)
+        elif proj == 'mlp':
+            hidden_size = (self.width + output_dim) // 2
+            self.proj = nn.Sequential(
+                nn.Linear(self.width, hidden_size, bias=False),
+                nn.GELU(),
+                nn.Linear(hidden_size, output_dim, bias=False),
+            )
 
         self.init_parameters()
 
     def init_parameters(self):
+        pass
         # nn.init.normal_(self.token_embedding.weight, std=0.02)
         # nn.init.normal_(self.positional_embedding, std=0.01)
 
@@ -141,8 +153,8 @@ class HFTextEncoder(nn.Module):
         #     nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
         #     nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
 
-        if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=self.width ** -0.5)
+        # if self.text_projection is not None:
+        #     nn.init.normal_(self.text_projection, std=self.width ** -0.5)
 
         # d_model = getattr(self.config, arch_dict[self.config.model_type]["config_names"]["width"])
         # d_model = getattr(self.config.text_config, arch_dict["bert"]["config_names"]["width"])
@@ -246,11 +258,13 @@ class HFTextEncoder(nn.Module):
         # print(out.last_hidden_state.shape, attn_mask.shape)
         # pooled_out = self.pooler(out, attn_mask)
         # pooled_out = out[torch.arange(out.shape[0]), x.argmax(dim=-1)] @ self.text_projection
-        pooled_out = out.last_hidden_state[torch.arange(out.last_hidden_state.shape[0]), (x == self.config.eos_token_id).int().argmax(dim=-1)] @ self.text_projection
+        # pooled_out = out.last_hidden_state[torch.arange(out.last_hidden_state.shape[0]), (x == self.config.eos_token_id).int().argmax(dim=-1)] @ self.text_projection
         # pooled_out = pooled_out @ self.text_projection
 
         # return self.proj(pooled_out) #, out, attn_mask
-        return pooled_out
+        pooled_out = self.pooler(out, attn_mask)
+        projected = self.proj(pooled_out)
+        return projected
 
     def lock(self, unlocked_layers:int=0, freeze_layer_norm:bool=True):
         if not unlocked_layers: # full freezing

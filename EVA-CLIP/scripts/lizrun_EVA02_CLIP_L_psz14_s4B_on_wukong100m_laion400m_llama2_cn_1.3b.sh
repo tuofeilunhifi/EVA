@@ -67,8 +67,8 @@ fi
 ###############################################################################################################################
 
 MODEL=EVA02-CLIP-L-14-LLaMA2-CN-1.3B
-# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
-PRETRAINED_IMAGE=''
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
+# PRETRAINED_IMAGE=''
 PRETRAINED_TEXT=''
 PRETRAINED_VISUAL_MODEL=EVA02-L-14
 PRETRAINED_TEXT_MODEL=OpenaiCLIP-L-14
@@ -113,8 +113,8 @@ torchrun --nnodes=${WORLD_SIZE} \
         --batch-size=1024 \
         --epochs=100 \
         --lr=5e-4 \
-        --visual-lr=1e-3 \
-        --text-lr=1e-4 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
         --wd=0.05 \
         --visual-wd=0.05 \
         --text-wd=0.05 \
