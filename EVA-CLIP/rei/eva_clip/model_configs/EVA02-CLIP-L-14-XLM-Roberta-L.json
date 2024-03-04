@@ -18,8 +18,8 @@
         "subln": true
     },
     "text_cfg": {
-        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--FacebookAI--xlm-roberta-large/snapshots/c23d21b0620b635a76227c604d44e43a9f0ee389",
-        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/models--FacebookAI--xlm-roberta-large/snapshots/c23d21b0620b635a76227c604d44e43a9f0ee389",
+        "hf_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/laion-xlm-roberta-large/snapshots/c23d21b0620b635a76227c604d44e43a9f0ee389",
+        "hf_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/laion-xlm-roberta-large/snapshots/c23d21b0620b635a76227c604d44e43a9f0ee389",
         "pooler_type": "mean_pooler",
         "proj": "mlp",
         "context_length": 77,
