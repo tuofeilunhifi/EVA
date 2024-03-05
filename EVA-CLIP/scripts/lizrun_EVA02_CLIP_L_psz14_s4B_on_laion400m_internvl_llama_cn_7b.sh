@@ -66,12 +66,11 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-L-14-LLaMA2-CN-1.3B
+MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
-# PRETRAINED_IMAGE=''
-PRETRAINED_TEXT=''
+PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-L-14
-PRETRAINED_TEXT_MODEL=OpenaiCLIP-L-14
+PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -113,17 +112,17 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1024 \
+        --batch-size=700 \
         --epochs=100 \
         --lr=5e-4 \
-        --visual-lr=1e-3 \
-        --text-lr=1e-4 \
-        --wd=0.1 \
-        --visual-wd=0.1 \
-        --text-wd=0.1 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
+        --wd=0.05 \
+        --visual-wd=0.05 \
+        --text-wd=0.05 \
         --ld=1.0 \
-        --visual-ld=0.95 \
-        --text-ld=0.95 \
+        --visual-ld=0.85 \
+        --text-ld=0.75 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
         --workers=8 \
@@ -132,7 +131,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token text_projection logit_scale \
+        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
         --seed 4096 \
         --gather-with-grad \
         --grad-checkpointing \
@@ -143,4 +142,5 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
+        # --lock-text \
         # --precision="amp_bf16" \

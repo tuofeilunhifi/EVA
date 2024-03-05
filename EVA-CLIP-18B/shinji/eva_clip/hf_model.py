@@ -83,12 +83,9 @@ class HFTextEncoder(nn.Module):
             pooler_type: str = None,
             proj: str = None,
             pretrained: bool = True,
-            masked_language_modeling: bool = False,
-            context_length: int = 77,
-            attn_mask: bool = True):
+            masked_language_modeling: bool = False):
         super().__init__()
 
-        self.context_length = context_length
         self.output_dim = output_dim
 
         # TODO: find better way to get this information
@@ -109,9 +106,7 @@ class HFTextEncoder(nn.Module):
                 self.transformer = create_func(model_args)
                 self.transformer = self.transformer.encoder
             else:
-                # self.transformer = create_func(model_args, add_pooling_layer=uses_transformer_pooler)
-                self.transformer = create_func(model_args)
-                self.transformer.pooler = None
+                self.transformer = create_func(model_args, add_pooling_layer=uses_transformer_pooler)
         else:
             self.config = config
             if masked_language_modeling:
@@ -119,49 +114,27 @@ class HFTextEncoder(nn.Module):
             else:
                 self.transformer = AutoModel.from_config(config)
 
-        # if pooler_type is None: # get default arch pooler
-        #     self.pooler = _POOLERS[(arch_dict[self.config.model_type]["pooler"])]()
-        # else:
-        #     self.pooler = _POOLERS[pooler_type]()
-        self.width = getattr(self.config, arch_dict["llama"]["config_names"]["width"])
-        self.text_projection = nn.Parameter(torch.empty(self.width, output_dim))
+        if pooler_type is None: # get default arch pooler
+            self.pooler = _POOLERS[(arch_dict[self.config.model_type]["pooler"])]()
+        else:
+            self.pooler = _POOLERS[pooler_type]()
 
-        self.init_parameters()
-
-    def init_parameters(self):
-        # nn.init.normal_(self.token_embedding.weight, std=0.02)
-        # nn.init.normal_(self.positional_embedding, std=0.01)
-
-        # proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
-        # attn_std = self.transformer.width ** -0.5
-        # fc_std = (2 * self.transformer.width) ** -0.5
-        # for block in self.transformer.resblocks:
-        #     nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-        #     nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-        #     nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-        #     nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
-
-        if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=self.width ** -0.5)
-
-        # d_model = getattr(self.config, arch_dict[self.config.model_type]["config_names"]["width"])
-        # d_model = getattr(self.config.text_config, arch_dict["bert"]["config_names"]["width"])
-        # d_model = getattr(self.config, arch_dict["llama"]["config_names"]["width"])
-        # if (d_model == output_dim) and (proj is None): # do we always need a proj?
-        #     self.proj = nn.Identity()
-        # elif proj == 'linear':
-        #     self.proj = nn.Linear(d_model, output_dim, bias=False)
-        # elif proj == 'mlp':
-        #     hidden_size = (d_model + output_dim) // 2
-        #     self.proj = nn.Sequential(
-        #         nn.Linear(d_model, hidden_size, bias=False),
-        #         nn.GELU(),
-        #         nn.Linear(hidden_size, output_dim, bias=False),
-        #     )
+        d_model = getattr(self.config, arch_dict[self.config.model_type]["config_names"]["width"])
+        if (d_model == output_dim) and (proj is None): # do we always need a proj?
+            self.proj = nn.Identity()
+        elif proj == 'linear':
+            self.proj = nn.Linear(d_model, output_dim, bias=False)
+        elif proj == 'mlp':
+            hidden_size = (d_model + output_dim) // 2
+            self.proj = nn.Sequential(
+                nn.Linear(d_model, hidden_size, bias=False),
+                nn.GELU(),
+                nn.Linear(hidden_size, output_dim, bias=False),
+            )
 
         # self.itm_proj = nn.Linear(d_model, 2, bias=False)
         # self.mlm_proj = nn.Linear(d_model, self.config.vocab_size), bias=False)
-        # self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     # def forward_itm(self, x:TensorType, image_embeds:TensorType) -> TensorType:
     #     image_atts = torch.ones(image_embeds.size()[:-1],dtype=torch.long).to(x.device)  
@@ -238,19 +211,11 @@ class HFTextEncoder(nn.Module):
 
 
     def forward(self, x:TensorType) -> TensorType:
-        # print(x, self.config.pad_token_id, (x != self.config.pad_token_id))
-        # print(x, self.pad_token_id, (x != self.pad_token_id))
         attn_mask = (x != self.config.pad_token_id).long()
-        # print(x.shape, torch.sum(x == self.config.pad_token_id), x.argmax(dim=-1))
         out = self.transformer(input_ids=x, attention_mask=attn_mask)
-        # print(out.last_hidden_state.shape, attn_mask.shape)
-        # pooled_out = self.pooler(out, attn_mask)
-        # pooled_out = out[torch.arange(out.shape[0]), x.argmax(dim=-1)] @ self.text_projection
-        pooled_out = out.last_hidden_state[torch.arange(out.last_hidden_state.shape[0]), (x == self.config.eos_token_id).int().argmax(dim=-1)] @ self.text_projection
-        # pooled_out = pooled_out @ self.text_projection
+        pooled_out = self.pooler(out, attn_mask)
 
-        # return self.proj(pooled_out) #, out, attn_mask
-        return pooled_out
+        return self.proj(pooled_out)
 
     def lock(self, unlocked_layers:int=0, freeze_layer_norm:bool=True):
         if not unlocked_layers: # full freezing
@@ -273,11 +238,11 @@ class HFTextEncoder(nn.Module):
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
         self.transformer.gradient_checkpointing_enable()
-        # transformer.text_model
-        # del self.transformer.vision_model, self.transformer.visual_projection, self.transformer.text_projection
-        # self.transformer = self.transformer.text_model
 
     def get_num_layers(self):
         encoder = self.transformer.encoder if hasattr(self.transformer, 'encoder') else self.transformer
-        layer_list = getattr(encoder, arch_dict["bert"]["config_names"]["layer_attr"])
+        layer_list = getattr(encoder, arch_dict[self.config.model_type]["config_names"]["layer_attr"])
         return len(layer_list)
+
+    def init_parameters(self):
+        pass

@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=4,5,6,7
+export CUDA_VISIBLE_DEVICES=6,7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/
 
 MODEL_NAME=eva02_tiny_patch14_xattn_fusedLN_SwiGLU_preln_RoPE
@@ -7,7 +7,7 @@ PRETRAIN_CKPT=/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_p14.pt
 
 OUTPUT_DIR=/mnt/pfs-guan-ssai/cv/cjy/projects/eva/${MODEL_NAME}
 
-DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k
+DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k
 
 
 sz=336
@@ -40,7 +40,7 @@ aa=rand-m9-mstd0.5-inc1
 
 # python -m torch.distributed.launch --nproc_per_node=8 --nnodes=${WORLD_SIZE} --node_rank=${RANK} \
 # --master_addr=${MASTER_ADDR} --master_port=12345 --use_env run_class_finetuning.py \
-torchrun --nproc_per_node=4 --nnodes=1 \
+torchrun --nproc_per_node=2 --nnodes=1 \
 run_class_finetuning.py \
         --data_path ${DATA_PATH}/train \
         --eval_data_path ${DATA_PATH}/val \

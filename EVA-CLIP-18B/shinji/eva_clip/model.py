@@ -20,7 +20,6 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .eva_vit_model import EVAVisionTransformer
 from .transformer import LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer
-from .internvl_model import InternVLLLaMA
 
 try:
     from apex.normalization import FusedLayerNorm
@@ -33,6 +32,33 @@ try:
 except ImportError:
     xops = None
     print("Please 'pip install xformers'")
+
+class RMSnorm(nn.Module):
+    """
+    adepted from transformers T5LayerNorm
+    """
+    def __init__(self, hidden_size, eps=1e-6):
+        """
+        Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
+        """
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.variance_epsilon = eps
+
+    def forward(self, hidden_states):
+        # T5 uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
+        # Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
+        # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
+        # half-precision inputs is done in fp32
+
+        variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
+        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+
+        # convert into half-precision if necessary
+        if self.weight.dtype in [torch.float16, torch.bfloat16]:
+            hidden_states = hidden_states.to(self.weight.dtype)
+
+        return self.weight * hidden_states
 
 @dataclass
 class CLIPVisionCfg:
@@ -61,6 +87,7 @@ class CLIPVisionCfg:
     intp_freq: bool = False
     naiveswiglu: bool = False
     subln: bool = False
+    use_rms_norm: bool = False
 
 
 @dataclass
@@ -80,9 +107,6 @@ class CLIPTextCfg:
     fusedLN: bool = False
     xattn: bool = False
     attn_mask: bool = True
-    eos_token_id: int = 49407
-    internvl_model_name: str = None
-    internvl_tokenizer_name: str = None
 
 def get_cast_dtype(precision: str):
     cast_dtype = None
@@ -109,7 +133,8 @@ def _build_vision_tower(
 
     if vision_cfg.eva_model_name:
         vision_heads = vision_cfg.width // vision_cfg.head_width
-        norm_layer = LayerNorm
+
+        norm_layer = RMSnorm if vision_cfg.use_rms_norm else LayerNorm
         
         visual = EVAVisionTransformer(
             img_size=vision_cfg.image_size,
@@ -192,15 +217,6 @@ def _build_text_tower(
             pooler_type=text_cfg.pooler_type,
             masked_language_modeling=text_cfg.masked_language_modeling
        )
-    elif text_cfg.internvl_model_name:
-        text = InternVLLLaMA(
-            text_cfg.internvl_model_name,
-            output_dim=embed_dim,
-            tokenizer_name=text_cfg.internvl_tokenizer_name,
-            proj=text_cfg.proj,
-            pooler_type=text_cfg.pooler_type,
-            masked_language_modeling=text_cfg.masked_language_modeling
-       )
     else:
         act_layer = QuickGELU if quick_gelu else nn.GELU
         norm_layer = LayerNorm
@@ -217,7 +233,6 @@ def _build_text_tower(
             norm_layer= FusedLayerNorm if text_cfg.fusedLN else norm_layer,
             xattn=text_cfg.xattn,
             attn_mask=text_cfg.attn_mask,
-            eos_token_id=text_cfg.eos_token_id,
         )
     return text
 

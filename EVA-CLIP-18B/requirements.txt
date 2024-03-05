@@ -1,4 +1,8 @@
-deepspeed==0.8.2
+torch>=1.9.0
+torchvision
+transformers==4.28.1
+deepspeed==0.8.3
+xformers
 apex
 timm==0.5.4
 webdataset>=0.2.5
@@ -22,7 +26,3 @@ ftfy
 regex
 iopath
 pyyaml
-ijson
-pydantic==1.10.9
-protobuf==3.20.0
-peft

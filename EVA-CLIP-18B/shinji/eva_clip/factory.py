@@ -8,13 +8,18 @@ from pathlib import Path
 from typing import Optional, Tuple, Union, Dict, Any
 import torch
 
+try:
+    import deepspeed
+except ImportError:
+    deepspeed = None
+
 from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
 from .model import CLIP, CustomCLIP, convert_weights_to_lp, convert_to_custom_text_state_dict,\
     get_cast_dtype
 from .openai import load_openai_model
 from .pretrained import is_pretrained_cfg, get_pretrained_cfg, download_pretrained, list_pretrained_tags_by_model
 from .transform import image_transform
-from .tokenizer import HFTokenizer, tokenize, InternVLTokenizer
+from .tokenizer import HFTokenizer, tokenize
 from .utils import resize_clip_pos_embed, resize_evaclip_pos_embed, resize_visual_pos_embed, resize_eva_pos_embed
 
 
@@ -72,12 +77,7 @@ def get_model_config(model_name):
 
 def get_tokenizer(model_name):
     config = get_model_config(model_name)
-    if 'hf_tokenizer_name' in config['text_cfg']:
-        tokenizer = HFTokenizer(config['text_cfg']['hf_tokenizer_name'])
-    elif 'internvl_tokenizer_name' in config['text_cfg']:
-        tokenizer = InternVLTokenizer(config['text_cfg']['internvl_tokenizer_name'])
-    else:
-        tokenizer = tokenize
+    tokenizer = HFTokenizer(config['text_cfg']['hf_tokenizer_name']) if 'hf_tokenizer_name' in config['text_cfg'] else tokenize
     return tokenizer
 
 
@@ -165,6 +165,117 @@ def get_pretrained_tag(pretrained_model):
     else:
         return "other"
 
+def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrained_model_path, ignore_mismatched_sizes=False):
+    """
+    adept from pytorch lightning and transformers
+    with deepspeed.zero.Init():
+        model = MyModel()
+    state_dict = torch.load(model_path, map_location="cpu")
+    load_zero_partitions(model, prefix="")
+    """
+    
+    # because zero3 puts placeholders in model params, this context
+    # manager gathers (unpartitions) the params of the current layer, then loads from
+    # the state dict and then re-partitions them again
+    model_state_dict = model.state_dict()
+    expected_keys = list(model_state_dict.keys())
+    loaded_keys = list(state_dict.keys())
+    missing_keys = list(set(expected_keys) - set(loaded_keys))
+    unexpected_keys = list(set(loaded_keys) - set(expected_keys))
+
+    # Mistmatched keys contains tuples key/shape1/shape2 of weights in the checkpoint that have a shape not
+    # matching the weights in the model.
+    mismatched_keys = []
+    if ignore_mismatched_sizes:
+        for checkpoint_key in loaded_keys:
+            model_key = checkpoint_key
+
+            if (
+                model_key in model_state_dict
+                and state_dict[checkpoint_key].shape != model_state_dict[model_key].shape
+            ):
+                mismatched_keys.append(
+                    (checkpoint_key, state_dict[checkpoint_key].shape, model_state_dict[model_key].shape)
+                )
+                del state_dict[checkpoint_key]
+    # copy state_dict so _load_from_state_dict can modify it
+    metadata = getattr(state_dict, "_metadata", None)
+    state_dict = state_dict.copy()
+    if metadata is not None:
+        state_dict._metadata = metadata
+
+    error_msgs = []
+
+    # PyTorch's `_load_from_state_dict` does not copy parameters in a module's descendants
+    # so we need to apply the function recursively.
+    def load(module, prefix=""):
+        local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
+        args = (state_dict, prefix, local_metadata, True, [], [], error_msgs)
+        if is_deepspeed_zero3_enabled:
+            # because zero3 puts placeholders in model params, this context
+            # manager gathers (unpartitions) the params of the current layer, then loads from
+            # the state dict and then re-partitions them again
+            with deepspeed.zero.GatheredParameters(list(module.parameters(recurse=False)), modifier_rank=0):
+                if torch.distributed.get_rank() == 0:
+                    module._load_from_state_dict(*args)
+        else:
+            module._load_from_state_dict(*args)
+
+        for name, child in module._modules.items():
+            if child is not None:
+                load(child, prefix + name + ".")
+
+    # Make sure we are able to load base models as well as derived models (with heads)
+    start_prefix = ""
+    model_to_load = model
+    load(model_to_load, prefix=start_prefix)
+    del state_dict
+    if len(error_msgs) > 0:
+        error_msg = "\n\t".join(error_msgs)
+        if "size mismatch" in error_msg:
+            error_msg += (
+                "\n\tYou may consider adding `ignore_mismatched_sizes=True` in the model `from_pretrained` method."
+            )
+        raise RuntimeError(f"Error(s) in loading state_dict for {model.__class__.__name__}:\n\t{error_msg}")
+    if len(unexpected_keys) > 0:
+        logging.warning(
+            f"Some weights of the model checkpoint at {pretrained_model_path} were not used when"
+            f" initializing {model.__class__.__name__}: {unexpected_keys}\n- This IS expected if you are"
+            f" initializing {model.__class__.__name__} from the checkpoint of a model trained on another task or"
+            " with another architecture (e.g. initializing a BertForSequenceClassification model from a"
+            " BertForPreTraining model).\n- This IS NOT expected if you are initializing"
+            f" {model.__class__.__name__} from the checkpoint of a model that you expect to be exactly identical"
+            " (initializing a BertForSequenceClassification model from a BertForSequenceClassification model)."
+        )
+    else:
+        logging.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
+    if len(missing_keys) > 0:
+        logging.warning(
+            f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at"
+            f" {pretrained_model_path} and are newly initialized: {missing_keys}\nYou should probably"
+            " TRAIN this model on a down-stream task to be able to use it for predictions and inference."
+        )
+    elif len(mismatched_keys) == 0:
+        logging.info(
+            f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at"
+            f" {pretrained_model_path}.\nIf your task is similar to the task the model of the checkpoint"
+            f" was trained on, you can already use {model.__class__.__name__} for predictions without further"
+            " training."
+        )
+    if len(mismatched_keys) > 0:
+        mismatched_warning = "\n".join(
+            [
+                f"- {key}: found shape {shape1} in the checkpoint and {shape2} in the model instantiated"
+                for key, shape1, shape2 in mismatched_keys
+            ]
+        )
+        logging.warning(
+            f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at"
+            f" {pretrained_model_path} and are newly initialized because the shapes did not"
+            f" match:\n{mismatched_warning}\nYou should probably TRAIN this model on a down-stream task to be able"
+            " to use it for predictions and inference."
+        )
+
 def load_pretrained_checkpoint(
         model,
         visual_checkpoint_path,
@@ -204,7 +315,7 @@ def load_pretrained_checkpoint(
         elif text_tag == "clip":
             text_state_dict = load_clip_text_state_dict(text_checkpoint_path, is_openai=True, skip_list=skip_list)
         else:
-            text_state_dict = load_state_dict(text_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
+            text_state_dict = load_state_dict(visual_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
 
         text_incompatible_keys = model.text.load_state_dict(text_state_dict, strict=strict)
         
@@ -230,7 +341,6 @@ def create_model(
         cache_dir: Optional[str] = None,
         skip_list: list  = [],
 ):
-
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
     if isinstance(device, str):
         device = torch.device(device)

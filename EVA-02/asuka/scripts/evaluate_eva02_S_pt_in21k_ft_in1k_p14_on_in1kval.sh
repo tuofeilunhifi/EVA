@@ -9,7 +9,7 @@ crop_pct=1.0
 
 EVAL_CKPT=/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_ft_in1k_p14.pt
 
-DATA_PATH=/workspace/datasets/ImageNet-1k/raw/imagenet1k
+DATA_PATH=/mnt/pfs-guan-ssai/cv/cjy/data/ImageNet-1k/raw/imagenet1k
 
 # using model w/o ema for evaluation (w/o --use_ema_ckpt_eval)
 # python -m torch.distributed.launch --nproc_per_node=4 --nnodes=${WORLD_SIZE} --node_rank=${RANK} \

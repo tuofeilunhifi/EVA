@@ -1,11 +1,11 @@
-export CUDA_VISIBLE_DEVICES=1,2,3,4
+export CUDA_VISIBLE_DEVICES=3,4,5,6
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
-MODEL=EVA02-CLIP-B-16-LLaMA2-CN-1.3B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_B_psz14to16.pt
-PRETRAINED_TEXT=''
-PRETRAINED_VISUAL_MODEL=EVA02-B-16
-PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
+MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
+PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
+PRETRAINED_VISUAL_MODEL=EVA02-L-14
+PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -41,15 +41,15 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
         --batch-size=256 \
-        --epochs=200 \
+        --epochs=100 \
         --lr=5e-4 \
-        --visual-lr=2e-3 \
-        --text-lr=2e-4 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
         --wd=0.05 \
         --visual-wd=0.05 \
         --text-wd=0.05 \
         --ld=1.0 \
-        --visual-ld=0.75 \
+        --visual-ld=0.85 \
         --text-ld=0.75 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
@@ -59,7 +59,7 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token text_projection logit_scale \
+        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
         --seed 4096 \
         --gather-with-grad \
         --grad-checkpointing \
@@ -70,4 +70,5 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
-        --precision="amp_bf16" \
+        --lock-text \
+        # --precision="amp_bf16" \

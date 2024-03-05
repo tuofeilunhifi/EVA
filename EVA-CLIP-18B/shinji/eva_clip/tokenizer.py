@@ -11,8 +11,6 @@ from typing import Union, List
 import ftfy
 import regex as re
 import torch
-from torch import nn
-from transformers import AutoTokenizer, LlamaTokenizer
 
 # https://stackoverflow.com/q/62691279
 import os
@@ -183,16 +181,15 @@ def tokenize(texts: Union[str, List[str]], context_length: int = 77) -> torch.Lo
             tokens = tokens[:context_length]  # Truncate
             tokens[-1] = eot_token
         result[i, :len(tokens)] = torch.tensor(tokens)
-        # print(sot_token, eot_token, tokens)
+
     return result
 
 
 class HFTokenizer:
     "HuggingFace tokenizer wrapper"
     def __init__(self, tokenizer_name:str):
-        self.tokenizer = LlamaTokenizer.from_pretrained(tokenizer_name)
-        if not self.tokenizer.pad_token:
-            self.tokenizer.pad_token = self.tokenizer.unk_token
+        from transformers import AutoTokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     def __call__(self, texts:Union[str, List[str]], context_length:int=77) -> torch.Tensor:
         # same cleaning as for default tokenizer, except lowercasing
@@ -201,20 +198,4 @@ class HFTokenizer:
             texts = [texts]
         texts = [whitespace_clean(basic_clean(text)) for text in texts]
         input_ids = self.tokenizer(texts, return_tensors='pt', max_length=context_length, padding='max_length', truncation=True).input_ids
-        return input_ids
-
-class InternVLTokenizer(nn.Module):
-    def __init__(self, model_path):
-        super(InternVLTokenizer, self).__init__()
-        self.tokenizer = LlamaTokenizer.from_pretrained(model_path)
-        self.tokenizer.pad_token = ' '  # allow padding
-        self.tokenizer.add_eos_token = True
-
-    def forward(self, texts, prefix='summarize:', context_length:int=80):
-        # same cleaning as for default tokenizer, except lowercasing
-        # adding lower (for case-sensitive tokenizers) will make it more robust but less sensitive to nuance
-        if isinstance(texts, str):
-            texts = [texts]
-        texts = [prefix + whitespace_clean(basic_clean(text)) for text in texts]
-        input_ids = self.tokenizer(texts, return_tensors='pt', max_length=context_length, truncation=True, padding='max_length').input_ids
         return input_ids
