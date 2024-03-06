@@ -85,7 +85,8 @@ PRETRAINED_TEXT_MODEL=other
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
-MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m/tarfile/{00000..01242}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m/tarfile/{00000..00331}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m/tarfile/{00000..01242}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m/tarfile/{00000..00331}.tar"
+MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m/tarfile/{00000..01242}.tar"
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
@@ -106,7 +107,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
         --wandb-notes="eva02_clip_L_14" \
-        --train-num-samples-list 40000000 1200000 300000 \
+        --train-num-samples-list 40000000 1200000 \
         --dataset-resampled \
         --train-data-list=${MERGE_500M_DATA_PATH} \
         --dataset-type-list="webdataset;webdataset;webdataset" \
