@@ -12,6 +12,7 @@ import torch
 from torchvision.transforms import Normalize, Compose, InterpolationMode, ToTensor, Resize, CenterCrop
 
 from .eva_model import EVA_CLIP, convert_weights_to_fp16
+from .internvl_c import InternVL_C
 
 OPENAI_DATASET_MEAN = (0.48145466, 0.4578275, 0.40821073)
 OPENAI_DATASET_STD = (0.26862954, 0.26130258, 0.27577711)
@@ -104,7 +105,10 @@ def create_model(
         # override for use of QuickGELU on non-OpenAI transformer models
         model_cfg["quick_gelu"] = True
 
-    model = EVA_CLIP(**model_cfg)
+    if 'internvl' in model_name:
+        model = InternVL_C(**model_cfg)
+    else:
+        model = EVA_CLIP(**model_cfg)
 
     load_checkpoint(model, pretrained)
                 

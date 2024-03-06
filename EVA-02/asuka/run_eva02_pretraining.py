@@ -274,6 +274,11 @@ def main(args, ds_init):
             clip_model=args.clip_model,
             cache_dir=args.cache_dir
         )
+    elif args.teacher_type == 'internvl':
+        teacher = EVACLIPWrapper(
+            clip_model=args.clip_model,
+            cache_dir=args.cache_dir
+        )
     else:
         raise NotImplementedError()
     

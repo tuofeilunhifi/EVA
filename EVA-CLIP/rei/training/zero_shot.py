@@ -104,7 +104,14 @@ def zero_shot_eval(model, data, epoch, args):
     for language in language_list:
         logging.info(f'Building zero-shot classifier {language}')
         classnames, templates = _load_classnames_and_classification_templates(dataset_name, current_folder, language)
-        classifier = zero_shot_classifier(model, classnames, templates, args)
+        classifier_path = os.path.join(args.logs, args.name, language)
+        if os.path.exists(classifier_path):
+            classifier = torch.load(classifier_path)
+            logging.info(f'Load classifier {language}!')
+        else:
+            classifier = zero_shot_classifier(model, classnames, templates, args)
+            torch.save(classifier, classifier_path)
+            logging.info(f'Save classifier {language}!')
 
         logging.info(f'Using classifier {language}')
         if 'imagenet-val' in data:
