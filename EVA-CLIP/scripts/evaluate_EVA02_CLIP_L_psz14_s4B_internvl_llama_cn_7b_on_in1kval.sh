@@ -4,7 +4,7 @@ cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 MODEL_NAME=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
 
 # PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_CLIP_E_psz14_plus_s9B.pt
-PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_04/eva_clip_l_epoch10.bin
+PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
 # can set PRETRAINED=eva to automaticaly download and load weights; please check details in pretrained.py
 # PRETRAINED=eva_clip
 
