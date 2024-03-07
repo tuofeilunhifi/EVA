@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 from einops import rearrange
-from timm.models.layers import DropPath, to_2tuple
+from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from torch import nn
 from transformers import LlamaConfig, LlamaForCausalLM
 
@@ -328,7 +328,7 @@ class InternVL_C(nn.Module):
     def __init__(self, in_chans=3, patch_size=14, img_size=224, qkv_bias=False, drop_path_rate=0.0,
                  embed_dim=3200, num_heads=25, mlp_ratio=4, init_values=0.1, qk_normalization=True, depth=48,
                  use_flash_attn=True, with_cp=True, layerscale_force_fp32=False, context_length: int = 80,
-                 transformer_width=4096, llm_path=None, attn_pool_num_heads=16, clip_embed_dim=768):
+                 transformer_width=4096, llm_path=None, attn_pool_num_heads=16, clip_embed_dim=768, vision_cfg=None, text_cfg=None):
         super().__init__()
 
         use_flash_attn = use_flash_attn and has_flash_attn
@@ -338,6 +338,8 @@ class InternVL_C(nn.Module):
         self.context_length = context_length
         self.embed_dim = embed_dim
         self.transformer_width = transformer_width
+        self.img_size = img_size
+        self.clip_embed_dim = clip_embed_dim
 
         """ text encoder of InternVL """
         llama_config = LlamaConfig.from_pretrained(llm_path)
@@ -369,9 +371,16 @@ class InternVL_C(nn.Module):
                   layerscale_force_fp32=layerscale_force_fp32)
             for i in range(depth)])
 
-        self.clip_projector = AttentionPoolingBlock(
-            dim=embed_dim, num_heads=attn_pool_num_heads, qkv_bias=True, qk_scale=None,
-            drop=0., attn_drop=0., norm_layer=partial(nn.LayerNorm, eps=1e-5), out_dim=clip_embed_dim)
+        # self.clip_projector = AttentionPoolingBlock(
+        #     dim=embed_dim, num_heads=attn_pool_num_heads, qkv_bias=True, qk_scale=None,
+        #     drop=0., attn_drop=0., norm_layer=partial(nn.LayerNorm, eps=1e-5), out_dim=clip_embed_dim)
+        self.head = nn.Linear(embed_dim, clip_embed_dim) if clip_embed_dim > 0 else nn.Identity()
+        if isinstance(self.head, nn.Linear):
+            trunc_normal_(self.head.weight, std=.02)
+        init_scale=0.001
+        if isinstance(self.head, nn.Linear):
+            self.head.weight.data.mul_(init_scale)
+            self.head.bias.data.mul_(init_scale)
 
     @property
     def dtype(self):
@@ -386,11 +395,13 @@ class InternVL_C(nn.Module):
 
         for idx, blk in enumerate(self.blocks):
             x = blk(x)
+        x = x[:, 1:, :]
         return x
 
     def encode_image(self, image):
         x = self.forward_features(image)
-        x = self.clip_projector(x)
+        # x = self.clip_projector(x)
+        x = self.head(x)
         return x
 
     def encode_text(self, text):

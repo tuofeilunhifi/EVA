@@ -1,3 +1,6 @@
 {
-    "llm_path": "/mnt/pfs-guan-ssai/cv/cjy/models/chinese_alpaca_lora_7b"
+    "embed_dim": 3200,
+    "llm_path": "/mnt/pfs-guan-ssai/cv/cjy/models/chinese_alpaca_lora_7b",
+    "vision_cfg": {},
+    "text_cfg": {}
 }

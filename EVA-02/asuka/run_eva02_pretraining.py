@@ -32,6 +32,17 @@ from utils import NativeScalerWithGradNormCount as NativeScaler
 from clip_wrapper import *
 import utils
 import modeling_pretrain
+from eva_clip import EVAVisionTransformer
+from eva_clip.eva_clip import load_checkpoint
+from eva_clip.transformer import LayerNorm
+from typing import Optional, Tuple, Union
+from dataclasses import dataclass
+from functools import partial
+try:
+    from apex.normalization import FusedLayerNorm
+except:
+    FusedLayerNorm = LayerNorm
+    print("Please 'pip install apex'")
 
 
 try:
@@ -61,6 +72,9 @@ def get_args():
 
     parser.add_argument('--clip_model', type=str, default='EVA_CLIP_g_14_X')
     parser.add_argument('--cache_dir', type=str, default='/path/to/eva_clip_psz14.pt')
+
+    # student setting
+    parser.add_argument('--student_pretrained', type=str, default='')
 
     # Model parameters
     parser.add_argument('--model', default='eva02_large_patch14_xattn_fusedLN_NaiveSwiGLU_subln_RoPE_jaxinit', 
@@ -227,23 +241,100 @@ def get_args():
 
     return parser.parse_args(), ds_init
 
+@dataclass
+class CLIPVisionCfg:
+    layers: Union[Tuple[int, int, int, int], int] = 12
+    width: int = 768
+    head_width: int = 64
+    mlp_ratio: float = 4.0
+    patch_size: int = 16
+    image_size: Union[Tuple[int, int], int] = 224
+    ls_init_value: Optional[float] = None  # layer scale initial value
+    patch_dropout: float = 0. # what fraction of patches to dropout during training (0 would mean disabled and no patches dropped) - 0.5 to 0.75 recommended in the paper for optimal results
+    global_average_pool: bool = False # whether to global average pool the last embedding layer, instead of using CLS token (https://arxiv.org/abs/2205.01580)
+    drop_path_rate: Optional[float] = None  # drop path rate
+    timm_model_name: str = None  # a valid model name overrides layers, width, patch_size
+    timm_model_pretrained: bool = False  # use (imagenet) pretrained weights for named model
+    timm_pool: str = 'avg'  # feature pooling for timm model ('abs_attn', 'rot_attn', 'avg', '')
+    timm_proj: str = 'linear'  # linear projection for timm model output ('linear', 'mlp', '')
+    timm_proj_bias: bool = False  # enable bias final projection
+    eva_model_name: str = None # a valid eva model name overrides layers, width, patch_size
+    qkv_bias: bool = True
+    fusedLN: bool = False
+    xattn: bool = False
+    postnorm: bool = False
+    rope: bool = False
+    pt_hw_seq_len: int = 16   # 224/14
+    intp_freq: bool = False
+    naiveswiglu: bool = False
+    subln: bool = False
+
+eva_clip_dict ={
+    "eva_clip_l_14": {
+            "image_size": 224,
+            "layers": 24,
+            "width": 1024,
+            "drop_path_rate": 0,
+            "head_width": 64,
+            "mlp_ratio": 2.6667,
+            "patch_size": 14,
+            "eva_model_name": "eva-clip-l-14",
+            "xattn": True,
+            "fusedLN": True,
+            "rope": True,
+            "pt_hw_seq_len": 16,
+            "intp_freq": True,
+            "naiveswiglu": True,
+            "subln": True
+        }
+}
 
 def get_model(args):
     print(f"Creating model: {args.model}")
 
-    model = create_model(
-        args.model,
-        pretrained=False,
-        img_size=args.input_size,
-        predict_feature_dim=args.teacher_out_feat_dim,
-        drop_path_rate=args.drop_path,
-        grad_ckpt=args.grad_ckpt,
-        stop_grad_conv1=args.stop_grad_conv1,
-        use_shared_rel_pos_bias=args.rel_pos_bias,
-        use_shared_decoupled_rel_pos_bias=args.decoupled_rel_pos_bias,
-        use_abs_pos_emb=args.abs_pos_emb,
-        init_values=args.layer_scale_init_value,
+    if args.model in eva_clip_dict.keys():
+        vision_cfg = eva_clip_dict[args.model]
+        if isinstance(vision_cfg, dict):
+            vision_cfg = CLIPVisionCfg(**vision_cfg)
+        vision_heads = vision_cfg.width // vision_cfg.head_width
+        norm_layer = LayerNorm
+        model = EVAVisionTransformer(
+            img_size=vision_cfg.image_size,
+            patch_size=vision_cfg.patch_size,
+            num_classes=args.teacher_out_feat_dim,
+            use_mean_pooling=vision_cfg.global_average_pool, #False
+            init_values=args.layer_scale_init_value,
+            patch_dropout=vision_cfg.patch_dropout,
+            embed_dim=vision_cfg.width,
+            depth=vision_cfg.layers,
+            num_heads=vision_heads,
+            mlp_ratio=vision_cfg.mlp_ratio,
+            qkv_bias=vision_cfg.qkv_bias,
+            drop_path_rate=args.drop_path,
+            norm_layer= partial(FusedLayerNorm, eps=1e-6) if vision_cfg.fusedLN else partial(norm_layer, eps=1e-6),
+            xattn=vision_cfg.xattn,
+            rope=vision_cfg.rope,
+            postnorm=vision_cfg.postnorm,
+            pt_hw_seq_len= vision_cfg.pt_hw_seq_len,   # 224/14
+            intp_freq= vision_cfg.intp_freq,
+            naiveswiglu= vision_cfg.naiveswiglu,
+            subln= vision_cfg.subln,
+            stop_grad_conv1=args.stop_grad_conv1,
         )
+    else:
+        model = create_model(
+            args.model,
+            pretrained=False,
+            img_size=args.input_size,
+            predict_feature_dim=args.teacher_out_feat_dim,
+            drop_path_rate=args.drop_path,
+            grad_ckpt=args.grad_ckpt,
+            stop_grad_conv1=args.stop_grad_conv1,
+            use_shared_rel_pos_bias=args.rel_pos_bias,
+            use_shared_decoupled_rel_pos_bias=args.decoupled_rel_pos_bias,
+            use_abs_pos_emb=args.abs_pos_emb,
+            init_values=args.layer_scale_init_value,
+            )
     return model
 
 
@@ -286,12 +377,15 @@ def main(args, ds_init):
 
     print("teacher = %s" % str(teacher))
 
-    args.teacher_out_feat_dim = teacher.net.visual.output_dim
+    args.teacher_out_feat_dim = teacher.net.clip_embed_dim
 
     print('teacher_out_feat_dim', args.teacher_out_feat_dim)
 
     model = get_model(args)
-    patch_size = model.get_final_patch_size()
+    if len(args.student_pretrained) > 0:
+        load_checkpoint(model, args.student_pretrained, strict=False)
+    
+    patch_size = model.patch_embed.patch_size
     print("Patch size = %s" % str(patch_size))
     args.window_size = (args.input_size // patch_size[0], args.input_size // patch_size[1])
     args.patch_size = patch_size

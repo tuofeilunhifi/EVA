@@ -77,12 +77,15 @@ def load_state_dict(checkpoint_path: str, map_location: str='cpu', model_key='mo
             state_dict = checkpoint
     if next(iter(state_dict.items()))[0].startswith('module'):
         state_dict = {k[7:]: v for k, v in state_dict.items()}
+
+    for k in list(state_dict.keys()):
+        if 'freqs_cos' in k or 'freqs_sin' in k:
+            del state_dict[k]
     return state_dict
 
 def load_checkpoint(model, checkpoint_path, model_key="model|module|state_dict", strict=True):
     state_dict = load_state_dict(checkpoint_path, model_key=model_key)
     incompatible_keys = model.load_state_dict(state_dict, strict=strict)
-    print(incompatible_keys)
     return incompatible_keys
 
 def create_model(
@@ -105,12 +108,12 @@ def create_model(
         # override for use of QuickGELU on non-OpenAI transformer models
         model_cfg["quick_gelu"] = True
 
-    if 'internvl' in model_name:
+    if 'InternVL' in model_name:
         model = InternVL_C(**model_cfg)
     else:
         model = EVA_CLIP(**model_cfg)
 
-    load_checkpoint(model, pretrained)
+    load_checkpoint(model, pretrained, strict=False)
                 
     model.to(device=device)
     if precision == "fp16":
@@ -118,8 +121,8 @@ def create_model(
         convert_weights_to_fp16(model)
 
     # set image / mean metadata from pretrained_cfg if available, or use default
-    model.visual.image_mean = OPENAI_DATASET_MEAN
-    model.visual.image_std = OPENAI_DATASET_STD
+    # model.visual.image_mean = OPENAI_DATASET_MEAN
+    # model.visual.image_std = OPENAI_DATASET_STD
 
     return model
 
@@ -169,8 +172,8 @@ def build_eva_model_and_transforms(
         model_name, pretrained, precision, device,
         force_quick_gelu=force_quick_gelu)
 
-    image_mean = image_mean or getattr(model.visual, 'image_mean', None)
-    image_std = image_std or getattr(model.visual, 'image_std', None)
-    preprocess_val = image_transform(model.visual.image_size, mean=image_mean, std=image_std)
+    # image_mean = image_mean or getattr(model.visual, 'image_mean', None)
+    # image_std = image_std or getattr(model.visual, 'image_std', None)
+    preprocess_val = image_transform(model.img_size, mean=image_mean, std=image_std)
 
     return model, preprocess_val

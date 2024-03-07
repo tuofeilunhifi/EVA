@@ -1,7 +1,9 @@
 export CUDA_VISIBLE_DEVICES=6,7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/
 
-MODEL=eva02_large_patch14_xattn_fusedLN_NaiveSwiGLU_subln_RoPE_xavier_normal_init
+# MODEL=eva02_large_patch14_xattn_fusedLN_NaiveSwiGLU_subln_RoPE_xavier_normal_init
+MODEL=eva_clip_l_14
+student_pretrained=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
 
 DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-21k/raw/imagenet21k
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k # monitoring val loss 
@@ -65,4 +67,5 @@ torchrun --nproc_per_node=2 --nnodes=1 \
         --zero_stage ${zero_stage} \
         --save_ckpt_freq ${save_ckpt_freq} \
         --stop_grad_conv1 \
-        --enable_deepspeed
+        --enable_deepspeed \
+        --student_pretrained ${student_pretrained}

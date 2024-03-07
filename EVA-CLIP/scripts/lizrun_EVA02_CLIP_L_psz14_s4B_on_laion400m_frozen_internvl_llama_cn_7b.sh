@@ -112,7 +112,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1024 \
+        --batch-size=1536 \
         --epochs=100 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
