@@ -2,3 +2,5 @@ logs/
 tools/
 __pycache__/
 wandb/
+
+model.safetensors

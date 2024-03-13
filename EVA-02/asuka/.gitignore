@@ -18,3 +18,4 @@ wandb/
 
 **/work_dirs/**
 deepspeed_config.json
+logs/

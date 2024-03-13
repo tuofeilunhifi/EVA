@@ -69,7 +69,6 @@ fi
 
 MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
-# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/logs/eva_clip_l_14/eva02_internvit_e20.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-L-14
 PRETRAINED_TEXT_MODEL=other
@@ -87,9 +86,9 @@ PRETRAINED_TEXT_MODEL=other
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
-# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
-MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..0063}.tar"
-# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m/tarfile/{00000..01242}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m/tarfile/{00000..00331}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m/tarfile/{00000..01242}.tar"
+MERGE_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -109,10 +108,10 @@ torchrun --nnodes=${WORLD_SIZE} \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
         --wandb-notes="eva02_clip_L_14" \
-        --train-num-samples 40000000 \
+        --train-num-samples-list 40000000 10000000\
         --dataset-resampled \
-        --train-data=${MERGE_500M_DATA_PATH} \
-        --dataset-type="webdataset" \
+        --train-data-list=${MERGE_DATA_PATH} \
+        --dataset-type-list="webdataset;webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
         --batch-size=1536 \

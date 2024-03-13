@@ -76,7 +76,7 @@ input_size=224
 num_mask_patches=105 ### 224*224/14/14 * 0.4 
 
 batch_size=32  # 32(bsz_per_gpu)*8(#gpus_per_node)*8(#nodes)*1(update_freq)=2048(total_bsz)
-update_freq=1000
+update_freq=1
 
 lr=1.5e-3
 b2=0.98
