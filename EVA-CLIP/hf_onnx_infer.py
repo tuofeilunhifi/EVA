@@ -4,12 +4,12 @@ from PIL import Image
 from transformers import  CLIPImageProcessor
 from transformers import AutoModel, AutoConfig
 
-from rope import resample_abs_pos_embed
+from torch_to_hf.rope import resample_abs_pos_embed
 
 # model_name = "EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B" 
 # pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin" # or "/path/to/EVA02_CLIP_B_psz16_s8B.pt"
 
-image_path = "CLIP.png"
+image_path = "torch_to_hf/CLIP.png"
 # caption = ["a diagram", "a dog", "a cat"]
 
 device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -25,7 +25,7 @@ import torch.utils.checkpoint
 from torch import nn
 from functools import partial
 import torch.nn.functional as F
-from rope import VisionRotaryEmbedding, VisionRotaryEmbeddingFast
+from .rope import VisionRotaryEmbedding, VisionRotaryEmbeddingFast
 
 # try:
 #     from apex.normalization import FusedLayerNorm
@@ -50,7 +50,7 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from configuration_evaclip import EvaCLIPConfig, EvaCLIPTextConfig, EvaCLIPVisionConfig
+from .configuration_evaclip import EvaCLIPConfig, EvaCLIPTextConfig, EvaCLIPVisionConfig
 
 logger = logging.get_logger(__name__)
 

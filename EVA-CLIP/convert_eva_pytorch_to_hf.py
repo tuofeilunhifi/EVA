@@ -22,8 +22,8 @@ import torch
 from PIL import Image
 from transformers import AutoModel, AutoConfig
 from transformers import  CLIPImageProcessor, pipeline, CLIPTokenizer
-from configuration_evaclip import EvaCLIPConfig, EvaCLIPVisionConfig
-from modeling_eva import EvaCLIPModel, EvaCLIPVisionModel, EvaCLIPVisionModelWithProjection
+from torch_to_hf.configuration_evaclip import EvaCLIPConfig, EvaCLIPVisionConfig
+from torch_to_hf.modeling_eva import EvaCLIPModel, EvaCLIPVisionModel, EvaCLIPVisionModelWithProjection
 
 
 KEYS_TO_MODIFY_MAPPING = {
