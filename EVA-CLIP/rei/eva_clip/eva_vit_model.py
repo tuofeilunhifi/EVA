@@ -285,13 +285,19 @@ class Block(nn.Module):
         self.postnorm = postnorm
 
     def forward(self, x, rel_pos_bias=None, attn_mask=None):
+        # None False
         if self.gamma_1 is None:
             if self.postnorm:
                 x = x + self.drop_path(self.norm1(self.attn(x, rel_pos_bias=rel_pos_bias, attn_mask=attn_mask)))
                 x = x + self.drop_path(self.norm2(self.mlp(x)))
             else:
+                # print(self.attn(self.norm1(x), rel_pos_bias=rel_pos_bias, attn_mask=attn_mask))
+                # exit()
                 x = x + self.drop_path(self.attn(self.norm1(x), rel_pos_bias=rel_pos_bias, attn_mask=attn_mask))
+                # print(x)
                 x = x + self.drop_path(self.mlp(self.norm2(x)))
+                # print(x)
+                # exit()
         else:
             if self.postnorm:
                 x = x + self.drop_path(self.gamma_1 * self.norm1(self.attn(x, rel_pos_bias=rel_pos_bias, attn_mask=attn_mask)))

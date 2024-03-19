@@ -1,0 +1,33 @@
+{
+    "embed_dim": 768,
+    "vision_cfg": {
+        "image_size": 336,
+        "layers": 24,
+        "width": 1024,
+        "drop_path_rate": 0,
+        "head_width": 64,
+        "mlp_ratio": 2.6667,
+        "patch_size": 14,
+        "eva_model_name": "eva-clip-l-14-336",
+        "xattn": true,
+        "fusedLN": true,
+        "rope": true,
+        "pt_hw_seq_len": 16,
+        "intp_freq": true,
+        "naiveswiglu": true,
+        "subln": true
+    },
+    "text_cfg": {
+        "internvl_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/chinese_alpaca_lora_7b",
+        "internvl_tokenizer_name": "/mnt/pfs-guan-ssai/cv/cjy/models/chinese_alpaca_lora_7b",
+        "pooler_type": "mean_pooler",
+        "proj": "mlp",
+        "context_length": 80,
+        "vocab_size": 49954,
+        "width": 4096,
+        "heads": 32,
+        "layers": 32,
+        "xattn": true,
+        "fusedLN": true
+    }
+}

@@ -36,8 +36,8 @@ KEYS_TO_MODIFY_MAPPING = {
     "mlp.c_fc":"mlp.fc1",
     "mlp.c_proj":"mlp.fc2",
     ".proj.":".out_proj.",
-    "q_bias":"q_proj.bias",
-    "v_bias":"v_proj.bias",
+    # "q_bias":"q_proj.bias",
+    # "v_bias":"v_proj.bias",
     "out.":"out_proj.",
     "norm1":"layer_norm1",
     "norm2":"layer_norm2",
@@ -135,13 +135,16 @@ def check_loaded_model(pytorch_dump_folder_path, tokenizer, processor, image, ca
     # detector_probs = detector(image, candidate_labels=captions)
     # print(f"text_probs loaded hf_model using pipeline: {detector_probs}")
 
-def convert_evaclip_checkpoint(checkpoint_path, pytorch_dump_folder_path, config_path, image_path, save=False):
-    processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+def convert_evaclip_checkpoint(checkpoint_path, pytorch_dump_folder_path, config_path, image_path, save=False, resize=224):
+    if resize == 224:
+        processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+    else:
+        processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
     image = Image.open(image_path)
     captions = ["a diagram", "a dog", "a cat"]
     tokenizer = CLIPTokenizer.from_pretrained(pytorch_dump_folder_path)
-    input_ids = tokenizer(captions,  return_tensors="pt", padding=True).input_ids
-    input_pixels = processor( images=image, return_tensors="pt", padding=True).pixel_values
+    # input_ids = tokenizer(captions,  return_tensors="pt", padding=True).input_ids
+    # input_pixels = processor( images=image, return_tensors="pt", padding=True).pixel_values
 
     # This requires having a clone of https://github.com/baaivision/EVA/tree/master/EVA-CLIP as well as the right conda env
     # original_evaclip_probs = getevaclip(checkpoint_path, input_pixels, captions)
@@ -150,8 +153,8 @@ def convert_evaclip_checkpoint(checkpoint_path, pytorch_dump_folder_path, config
     # transformers_config = EvaCLIPConfig.from_pretrained(config_path)
     # hf_model = EvaCLIPModel(transformers_config)
     transformers_config = EvaCLIPVisionConfig.from_pretrained(config_path)
-    # hf_model = EvaCLIPVisionModel(transformers_config)
-    hf_model = EvaCLIPVisionModelWithProjection(transformers_config)
+    hf_model = EvaCLIPVisionModel(transformers_config)
+    # hf_model = EvaCLIPVisionModelWithProjection(transformers_config)
     pt_model_state_dict = torch.load(checkpoint_path)
     state_dict = rename_state_dict(pt_model_state_dict)
 
@@ -189,11 +192,10 @@ if __name__ == "__main__":
     parser.add_argument("--config_path", default='EVA-CLIP/EVA02-CLIP-bigE-14-plus_s9B', type=str, help="Path to hf config.json of model to convert")
     parser.add_argument("--image_path", default='EVA-CLIP/EVA02-CLIP-bigE-14-plus_s9B/CLIP.png', type=str, help="Path to image")
     parser.add_argument("--save", default=False, type=str, help="Path to image")
+    parser.add_argument("--resize", default=224, type=int, help="Image resize")
 
     args = parser.parse_args()
 
-    convert_evaclip_checkpoint(args.checkpoint_path, args.pytorch_dump_folder_path, args.config_path, args.image_path, args.save)
+    convert_evaclip_checkpoint(args.checkpoint_path, args.pytorch_dump_folder_path, args.config_path, args.image_path, args.save, args.resize)
 
-    # python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02-bigE-14-plus_s9B --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_CLIP_E_psz14_plus_s9B.pt --config_path /mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02-bigE-14-plus_s9B --image_path ./CLIP.png --save True
-    # python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02-l-14 --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin --config_path /mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02-l-14 --image_path ./CLIP.png --save True
-    # python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /workspace/projects/EVA02-l-14 --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin --config_path /workspace/projects/EVA02-l-14 --image_path ./CLIP.png --save True
+    # python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/ --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_19/eva_clip_l_336_e4.bin --config_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/ --image_path ./CLIP.png --save True --resize 336

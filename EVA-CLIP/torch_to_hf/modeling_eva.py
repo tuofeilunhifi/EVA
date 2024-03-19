@@ -190,6 +190,7 @@ class EvaCLIPVisionEmbeddings(nn.Module):
         self.embed_dim = config.hidden_size
         self.image_size = config.image_size
         self.patch_size = config.patch_size
+        self.dynamic_image_size = config.dynamic_image_size
 
         self.class_embedding = nn.Parameter(torch.randn(self.embed_dim))
 
@@ -198,22 +199,26 @@ class EvaCLIPVisionEmbeddings(nn.Module):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            bias=True,
+            bias=True
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
+        self.num_prefix_tokens = 1
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
         self.register_buffer("position_ids", torch.arange(self.num_positions).expand((1, -1)), persistent = False)
+        # self.position_embedding = nn.Parameter(torch.zeros(self.num_positions, self.embed_dim))
 
     def forward(self, pixel_values: torch.FloatTensor) -> torch.Tensor:
         batch_size = pixel_values.shape[0]
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
+        B, H, W, C = patch_embeds.shape
         patch_embeds = patch_embeds.flatten(2).transpose(1, 2)
 
         class_embeds = self.class_embedding.expand(batch_size, 1, -1)
         embeddings = torch.cat([class_embeds, patch_embeds], dim=1)
+
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -376,9 +381,16 @@ class EvaCLIPAttention(nn.Module):
             )
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
+        # self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+        # self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
+        # self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
-        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
-        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=True)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
+
+        self.q_bias = nn.Parameter(torch.zeros(self.embed_dim))
+        self.v_bias = nn.Parameter(torch.zeros(self.embed_dim))
+
         self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
         # if config.qkv_bias:
@@ -418,7 +430,10 @@ class EvaCLIPAttention(nn.Module):
         # q = F.linear(input=x, weight=self.q_proj.weight, bias=self.q_bias)
         # k = F.linear(input=x, weight=self.k_proj.weight, bias=None)
         # v = F.linear(input=x, weight=self.v_proj.weight, bias=self.v_bias)
-        q,k,v = self.q_proj(x), self.k_proj(x), self.v_proj(x)
+        # q,k,v = self.q_proj(x), self.k_proj(x), self.v_proj(x)
+        q = F.linear(input=x, weight=self.q_proj.weight, bias=self.q_bias)
+        k = F.linear(input=x, weight=self.k_proj.weight, bias=None)
+        v = F.linear(input=x, weight=self.v_proj.weight, bias=self.v_bias)
 
         q = q.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)     # B, num_heads, N, C
         k = k.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)  
@@ -735,6 +750,7 @@ class EvaCLIPEncoderLayer(nn.Module):
         if self.post_layernorm:
             hidden_states = self.layer_norm1(hidden_states)
         hidden_states = residual + hidden_states
+        # print(hidden_states)
         residual = hidden_states
         if not self.post_layernorm:
             hidden_states = self.layer_norm2(hidden_states)
@@ -742,6 +758,8 @@ class EvaCLIPEncoderLayer(nn.Module):
         if self.post_layernorm:
             hidden_states = self.layer_norm2(hidden_states)
         hidden_states = residual + hidden_states
+        # print(hidden_states)
+        # exit()
 
         outputs = (hidden_states,)
 
@@ -772,7 +790,7 @@ class EvaCLIPPreTrainedModel(PreTrainedModel):
             factor = self.config.initializer_factor
             nn.init.normal_(module.class_embedding, mean=0.0, std=module.embed_dim**-0.5 * factor)
             nn.init.normal_(module.patch_embedding.weight, std=module.config.initializer_range * factor)
-            nn.init.normal_(module.position_embedding.weight, std=module.config.initializer_range * factor)
+            # nn.init.normal_(module.position_embedding.weight, std=module.config.initializer_range * factor)
         elif isinstance(module, EvaCLIPAttention):
             factor = self.config.initializer_factor
             in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
@@ -1160,7 +1178,7 @@ class EvaCLIPVisionTransformer(nn.Module):
         if config.rope:
             num_heads = config.hidden_size // config.head_width
             half_head_dim = config.hidden_size // num_heads // 2
-            hw_seq_len = config.image_size // config.patch_size
+            hw_seq_len = config.dynamic_image_size // config.patch_size
             self.rope = VisionRotaryEmbeddingFast(
                 dim=half_head_dim,
                 pt_seq_len=config.pt_hw_seq_len,

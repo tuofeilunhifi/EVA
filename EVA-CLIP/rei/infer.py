@@ -4,21 +4,24 @@ from PIL import Image
 from transformers import  CLIPImageProcessor
 # from transformers import AutoModel, AutoConfig
 
-model_name = "EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B" 
-pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin" # or "/path/to/EVA02_CLIP_B_psz16_s8B.pt"
+# model_name = "EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B" 
+# pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin" # or "/path/to/EVA02_CLIP_B_psz16_s8B.pt"
+model_name = "EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B" 
+pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_19/eva_clip_l_336_e4.bin"
 
 image_path = "CLIP.png"
 caption = ["a diagram", "a dog", "a cat"]
 
 image = Image.open(image_path)
-processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+# processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
 inputs = processor(images=image, return_tensors="pt")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, _, preprocess = create_model_and_transforms(model_name, pretrained, force_custom_clip=True)
 model = model.to(device)
 image_features = model.encode_image(inputs['pixel_values'].to(device))
-# print(image_features)
+print(image_features)
 
 
 # pytorch_dump_folder_path = "/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02-l-14"

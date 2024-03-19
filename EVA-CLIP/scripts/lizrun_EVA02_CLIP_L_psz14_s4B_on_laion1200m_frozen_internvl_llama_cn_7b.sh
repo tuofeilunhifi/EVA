@@ -69,6 +69,7 @@ fi
 
 MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
 PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/logs/eva_clip_l_14/eva02_internvit_e20.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-L-14
 PRETRAINED_TEXT_MODEL=other
@@ -114,7 +115,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=700 \
+        --batch-size=1024 \
         --epochs=100 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
@@ -144,5 +145,4 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
-        # --lock-text \
-        # --precision="amp_bf16" \
+        --lock-text \

@@ -67,10 +67,10 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
+MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
-PRETRAINED_VISUAL_MODEL=EVA02-L-14
+PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
@@ -103,7 +103,7 @@ torchrun --nnodes=${WORLD_SIZE} \
   --rdzv_backend=c10d \
   --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
-        --save-frequency 10 \
+        --save-frequency 2 \
         --zeroshot-frequency 1 \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
@@ -114,8 +114,8 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=700 \
-        --epochs=100 \
+        --batch-size=768 \
+        --epochs=50 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
         --text-lr=4e-5 \
@@ -123,8 +123,8 @@ torchrun --nnodes=${WORLD_SIZE} \
         --visual-wd=0.05 \
         --text-wd=0.05 \
         --ld=1.0 \
-        --visual-ld=0.85 \
-        --text-ld=0.75 \
+        --visual-ld=0.75 \
+        --text-ld=0.65 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
         --workers=8 \
@@ -144,5 +144,4 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
-        # --lock-text \
-        # --precision="amp_bf16" \
+        --lock-text \

@@ -14,7 +14,7 @@ import nltk
 # tarp -v create recipe -o /mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/{00000}.tar
 # /mnt/pfs-mc0p4k/cv/team/panxuhao/data/laion2b-en/aigc_laion200m/sub_data_10m
 
-# image_dir='/mnt/pfs-mc0p4k/cv/team/panxuhao/data/laion2b-en/20240127/'
+image_dir='/mnt/pfs-mc0p4k/cv/team/panxuhao/data/laion2b-en-mada/20240228/'
 # source_json_dir = "/mnt/pfs-mc0p4k/cv/team/panxuhao/data/laion2b-en/aigc_laion200m/sub_data_10m"
 # target_json_dir = "/mnt/pfs-guan-ssai/cv/cjy/data/laion2B-en/recipe_aigc_laion200m"
 source_json_dir = "/mnt/pfs-mc0p4k/cv/team/panxuhao/data/laion2b-en-mada/20240228/json_refined"
@@ -50,6 +50,7 @@ def single_json_warpper(index):
         with open(target_recipe_path, 'w') as target_recipe_file:
             for item in objects:
                 imagefile = item['image']
+                imagefile = os.path.join(image_dir, '/'.join(imagefile.split('/')[-4:]))
                 caption = item['caption'].replace("\n", "")
                 words = nltk.word_tokenize(caption)
                 if os.path.exists(imagefile) and len(words) <= 200:
@@ -66,7 +67,8 @@ print("cpu_count:{}".format(cpu_count))
 cpu_worker_num = cpu_count
 # process_args = [i for i in range(128)]
 # process_args = [i for i in range(64)]
-process_args = [i for i in range(len(source_json_list))]
+# process_args = [i for i in range(len(source_json_list))]
+process_args = [16, 17, 18, 23, 24, 25, 26, 27]
 # process_args = [i for i in range(64,128)]
 # cpu_worker_num = 1
 # process_args = [0]
