@@ -21,7 +21,10 @@ PRETRAINED_TEXT_MODEL=other
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
-MERGE_500M_DATA_PATH="/mnt/pfs-guan-ssai/cv/cjy/data/cc3m/{00000..00000}.tar;/mnt/pfs-guan-ssai/cv/cjy/data/cc12m/{00000..00000}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-guan-ssai/cv/cjy/data/cc3m/{00000..00000}.tar;/mnt/pfs-guan-ssai/cv/cjy/data/cc12m/{00000..00000}.tar"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit/00000/{00000..00132}.tar"
+MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit/"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit/00000"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -34,10 +37,10 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --report-to="tensorboard" \
         --wandb-project-name="eva-clip" \
         --wandb-notes="eva02_clip_B_16" \
-        --train-num-samples-list 20000000 20000000\
+        --train-num-samples 40000000\
         --dataset-resampled \
-        --train-data-list=${MERGE_500M_DATA_PATH} \
-        --dataset-type-list="webdataset;webdataset" \
+        --train-data=${MERGE_500M_DATA_PATH} \
+        --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
         --batch-size=256 \

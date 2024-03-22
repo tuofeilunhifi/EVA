@@ -36,7 +36,7 @@
   "qkv_bias": true,
   "rope": true,
   "torch_dtype": "float32",
-  "transformers_version": "4.36.2",
+  "transformers_version": "4.28.1",
   "v_bias": true,
   "xattn": true
 }

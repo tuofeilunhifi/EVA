@@ -29,6 +29,7 @@ pip install torch-2.0.1+cu118-cp310-cp310-linux_x86_64.whl
 pip install torchvision-0.15.2+cu118-cp310-cp310-linux_x86_64.whl
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/
 # pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install pydantic==1.10.9
 pip install -r requirements.txt
 
 cd /mnt/pfs-guan-ssai/cv/cjy/envs/
@@ -66,12 +67,11 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-L-14-LLaMA2-CN-1.3B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
-# PRETRAINED_IMAGE=''
-PRETRAINED_TEXT=''
-PRETRAINED_VISUAL_MODEL=EVA02-L-14
-PRETRAINED_TEXT_MODEL=OpenaiCLIP-L-14
+MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
+PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
+PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
+PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -86,7 +86,8 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-L-14
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
-MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
+MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/" #laion1.2b + wukong100m + cc3m + cc12m
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
@@ -102,7 +103,7 @@ torchrun --nnodes=${WORLD_SIZE} \
   --rdzv_backend=c10d \
   --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
-        --save-frequency 10 \
+        --save-frequency 2 \
         --zeroshot-frequency 1 \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
@@ -113,17 +114,17 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1024 \
-        --epochs=100 \
+        --batch-size=800 \
+        --epochs=50 \
         --lr=5e-4 \
-        --visual-lr=1e-3 \
-        --text-lr=1e-4 \
-        --wd=0.1 \
-        --visual-wd=0.1 \
-        --text-wd=0.1 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
+        --wd=0.05 \
+        --visual-wd=0.05 \
+        --text-wd=0.05 \
         --ld=1.0 \
-        --visual-ld=0.95 \
-        --text-ld=0.95 \
+        --visual-ld=0.75 \
+        --text-ld=0.65 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
         --workers=8 \
@@ -132,7 +133,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token text_projection logit_scale \
+        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
         --seed 4096 \
         --gather-with-grad \
         --grad-checkpointing \
@@ -143,4 +144,4 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
-        # --precision="amp_bf16" \
+        --lock-text \

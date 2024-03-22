@@ -24,8 +24,12 @@ export NCCL_IB_RETRY_CNT=13
 
 # 简单镜像依赖添加
 ## 复杂组件打入镜像，小组件可以单独在启动脚本安装
+cd /mnt/pfs-guan-ssai/cv/cjy/envs/
+pip install torch-2.0.1+cu118-cp310-cp310-linux_x86_64.whl
+pip install torchvision-0.15.2+cu118-cp310-cp310-linux_x86_64.whl
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/
-pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
+# pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install pydantic==1.10.9
 pip install -r requirements.txt
 
 cd /mnt/pfs-guan-ssai/cv/cjy/envs/
@@ -37,8 +41,11 @@ pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation -
 
 pip install xformers==0.0.22 --index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-cp -r /mnt/pfs-guan-ssai/cv/cjy/envs/adt ./
-sudo ./adt --token 1852d6b5acf8a1b50a88ac75c3a95136 mountbos
+# cp -r /mnt/pfs-guan-ssai/cv/cjy/envs/adt ./
+# sudo ./adt --token 1852d6b5acf8a1b50a88ac75c3a95136 mountbos
+
+# cd /mnt/pfs-guan-ssai/cv/cjy/envs/
+# pip install xformers-0.0.22.post7+cu118-cp310-cp310-manylinux2014_x86_64.whl
 
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
@@ -60,11 +67,12 @@ else
 fi
 ###############################################################################################################################
 
-MODEL=EVA02-CLIP-B-16-LLaMA2-CN-1.3B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_B_psz14to16.pt
-PRETRAINED_TEXT=''
-PRETRAINED_VISUAL_MODEL=EVA02-B-16
-PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
+MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/logs/eva_clip_l_14/eva02_internvit_e20.bin
+PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
+PRETRAINED_VISUAL_MODEL=EVA02-L-14
+PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -76,15 +84,22 @@ PRETRAINED_TEXT_MODEL=OpenaiCLIP-B-16
 # Following OpenCLIP, we preprocess data by webdataset. We concat paths of LAION-2B and COYO-700M with `;`.
 # MERGE_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar;/path/to/coyo700m_en_data/img_data/{000000..047435}.tar"
 # LAION_2B_DATA_PATH="/path/to/laion2b_en_data/img_data/{000000..164090}.tar"
-# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/wukong-all.json
-WUKONG_100M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
+# WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_1200m/{00000..00127}.tar"
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit/00000/{00000..00132}.tar"
+MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
 #        	--nnodes=$WORLD_SIZE --node_rank=$RANK \
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
-# torchrun --nproc_per_node=8 --nnodes=1 \
+# 5e-4/4e-4/4e-5
+# 0.05/0.05/0.05
+# 1.0/0.85/0.75
 torchrun --nnodes=${WORLD_SIZE} \
   --nproc_per_node=8 \
   --rdzv_id=100 \
@@ -95,23 +110,23 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zeroshot-frequency 1 \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
-        --wandb-notes="eva02_clip_B_16" \
+        --wandb-notes="eva02_clip_L_14" \
         --train-num-samples 40000000 \
         --dataset-resampled \
-        --train-data=${WUKONG_100M_DATA_PATH} \
+        --train-data=${MERGE_500M_DATA_PATH} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=2048 \
-        --epochs=200 \
+        --batch-size=1640 \
+        --epochs=100 \
         --lr=5e-4 \
-        --visual-lr=2e-4 \
-        --text-lr=2e-5 \
+        --visual-lr=4e-4 \
+        --text-lr=4e-5 \
         --wd=0.05 \
         --visual-wd=0.05 \
         --text-wd=0.05 \
         --ld=1.0 \
-        --visual-ld=0.75 \
+        --visual-ld=0.85 \
         --text-ld=0.75 \
         --grad-clip-norm=5.0 \
         --smoothing=0. \
@@ -121,7 +136,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token text_projection logit_scale \
+        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
         --seed 4096 \
         --gather-with-grad \
         --grad-checkpointing \
@@ -132,4 +147,4 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
-        # --precision="amp_bf16" \
+        --lock-text \

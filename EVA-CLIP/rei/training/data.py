@@ -87,12 +87,31 @@ class DataInfo:
         if self.sampler is not None and isinstance(self.sampler, DistributedSampler):
             self.sampler.set_epoch(epoch)
 
+def search_urls(urls):
+    multi_urls = urls.split(";")
+    urls = []
+    for sd in multi_urls:
+        urls.extend(wds.shardlists.expand_urls(sd))
+    seach_all = []
+    for url in urls:
+        if url.endswith('.tar'):
+            seach_all.append(url)
+        elif os.path.isdir(url):
+            for root, _, files in os.walk(url):
+                for file in files:
+                    if file.endswith('.tar'):
+                        seach_all.append(os.path.join(root, file))
+        else:
+            print(f"Invalid URL: {url}")
+    return seach_all
+
 
 def get_dataset_size(shards):
     multi_shards = shards.split(";")
     shards_list = []
     for sd in multi_shards:
-        shards_list.extend(wds.shardlists.expand_urls(sd))
+        # shards_list.extend(wds.shardlists.expand_urls(sd))
+        shards_list.extend(search_urls(sd))
     dir_path = os.path.dirname(shards_list[0])
     sizes_filename = os.path.join(dir_path, 'sizes.json')
     len_filename = os.path.join(dir_path, '__len__')
@@ -286,30 +305,13 @@ class ResampledShards2(IterableDataset):
         :param urls: a list of URLs as a Python list or brace notation string
         """
         super().__init__()
-        multi_urls = urls.split(";")
-        urls = []
-        for sd in multi_urls:
-            urls.extend(wds.shardlists.expand_urls(sd))
-        self.urls = urls
+        self.urls = search_urls(urls)
         assert isinstance(self.urls[0], str)
         self.nshards = nshards
         self.rng = random.Random()
         self.worker_seed = worker_seed
         self.deterministic = deterministic
         self.epoch = epoch
-
-    def search_urls(self, urls):
-        seach_all = []
-        for root in urls:
-            parts = os.listdir(root)
-            part_paths = [os.path.join(root, part) for part in parts]
-
-            all_paths = []
-            for part_path in part_paths:
-                temp_paths = glob.glob(os.path.join(part_path, '*.tar'))
-                all_paths.extend(temp_paths)
-            seach_all.extend(all_paths)
-        return seach_all
 
     def __iter__(self):
         """Return an iterator over the shards."""
@@ -330,23 +332,6 @@ class ResampledShards2(IterableDataset):
             self.rng.seed(seed)
         for _ in range(self.nshards):
             yield dict(url=self.rng.choice(self.urls))
-
-def search_urls(urls):
-    multi_urls = urls.split(";")
-    urls = []
-    for sd in multi_urls:
-        urls.extend(wds.shardlists.expand_urls(sd))
-    seach_all = []
-    for root in urls:
-        parts = os.listdir(root)
-        part_paths = [os.path.join(root, part) for part in parts]
-
-        all_paths = []
-        for part_path in part_paths:
-            temp_paths = glob.glob(os.path.join(part_path, '*.tar'))
-            all_paths.extend(temp_paths)
-        seach_all.extend(all_paths)
-    return seach_all
 
 def get_real_wds_size(shards):
     all_wds_tars = wds.shardlists.expand_urls(shards)
@@ -381,10 +366,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, tokeni
     if resampled:
         pipeline = [ResampledShards2(input_shards, deterministic=True, epoch=shared_epoch)]
     else:
-        multi_datasets = input_shards.split(";")
-        all_shards = []
-        for ds in multi_datasets:
-            all_shards.extend(wds.shardlists.expand_urls(ds))
+        all_shards = search_urls(input_shards)
         pipeline = [wds.SimpleShardList(all_shards)]
 
     # at this point we have an iterator over all the shards
