@@ -7,9 +7,9 @@ from transformers import  CLIPImageProcessor
 # model_name = "EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B" 
 # pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin" # or "/path/to/EVA02_CLIP_B_psz16_s8B.pt"
 model_name = "EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B" 
-pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_19/eva_clip_l_336_e4.bin"
+pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_22/eva_clip_l_336_e4.bin"
 
-image_path = "torch_to_hf/CLIP.png"
+image_path = "CLIP.png"
 caption = ["a diagram", "a dog", "a cat"]
 
 image = Image.open(image_path)

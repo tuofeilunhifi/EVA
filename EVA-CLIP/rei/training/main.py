@@ -119,6 +119,10 @@ def main(args):
         logging.info(f'Running with a single process. Device {args.device}.')
 
     random_seed(args.seed, 0)
+    model_kwargs = {}
+    if args.siglip:
+        model_kwargs['init_logit_scale'] = np.log(10)  # different from CLIP
+        model_kwargs['init_logit_bias'] = -10
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
         args.pretrained,
@@ -136,6 +140,7 @@ def main(args):
         image_std=args.image_std,
         cache_dir=args.cache_dir,
         skip_list=args.skip_list,
+        **model_kwargs,
     )
 
     random_seed(args.seed, args.rank)

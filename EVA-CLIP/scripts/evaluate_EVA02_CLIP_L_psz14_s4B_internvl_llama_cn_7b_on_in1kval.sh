@@ -1,16 +1,17 @@
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
 MODEL_NAME=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
 
 # PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/EVA02_CLIP_E_psz14_plus_s9B.pt
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 PRETRAINED_TEXT_MODEL=other
 
 
 DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
+FLICKR30K_PATH=/mnt/pfs-guan-ssai/cv/cjy/data/flick30k
 
 torchrun --nproc_per_node=1 --nnodes=1 training/main.py \
         --imagenet-val ${DATA_PATH} \
@@ -21,4 +22,5 @@ torchrun --nproc_per_node=1 --nnodes=1 training/main.py \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
         --force-custom-clip \
         --enable_deepspeed \
-        # --language="cn" \
+        --flickr30k ${FLICKR30K_PATH} \
+        --language="cn" \

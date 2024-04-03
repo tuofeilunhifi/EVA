@@ -100,6 +100,14 @@ def parse_args(args):
         help="Path to imagenet v2 for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--flickr30k",
+        type=str,
+        default=None,
+        help="Path to flickr30k test set for conducting zero shot retrieval.",
+    )
+    parser.add_argument('--recall_k', default=[1, 5, 10], type=int,
+                             help='for retrieval, select the k for Recall@K metric. ', nargs='+', )
+    parser.add_argument(
         "--logs",
         type=str,
         default="./logs/",
@@ -460,6 +468,12 @@ def parse_args(args):
     parser.add_argument('--enable_deepspeed', action='store_true', default=False)
     parser.add_argument('--language', default='en', type=str,
                              help='language(s) of classname and prompts to use for zeroshot classification.')
+    parser.add_argument(
+        "--siglip",
+        default=False,
+        action="store_true",
+        help='Use SigLip (sigmoid) loss.'
+    )
 
     args = parser.parse_args(args)
 

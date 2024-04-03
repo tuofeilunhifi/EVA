@@ -17,9 +17,10 @@ try:
     import wandb
 except ImportError:
     wandb = None
-from eva_clip import ClipLoss, SPARCLoss, get_cast_dtype, get_tokenizer
+from eva_clip import ClipLoss, SPARCLoss, SigLipLoss, get_cast_dtype, get_tokenizer
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
+from .zeroshot_retrieval import zero_shot_retrieval_eval
 from .precision import get_autocast
 from .utils import save_file
 
@@ -78,13 +79,19 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     cast_dtype = get_cast_dtype(args.precision)
 
     model.train()
-    clip_loss_funcation = ClipLoss(
-        local_loss=args.local_loss,
-        gather_with_grad=args.gather_with_grad,
-        cache_labels=True,
-        rank=args.rank,
-        world_size=args.world_size,
+    if args.siglip:
+        clip_loss_funcation = SigLipLoss(
+            rank=args.rank,
+            world_size=args.world_size,
         )
+    else:
+        clip_loss_funcation = ClipLoss(
+            local_loss=args.local_loss,
+            gather_with_grad=args.gather_with_grad,
+            cache_labels=True,
+            rank=args.rank,
+            world_size=args.world_size,
+            )
     
     # if args.sparc_loss:
     #     sparc_loss_funcation = SPARCLoss()
@@ -125,8 +132,12 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             optimizer.zero_grad()
 
         with autocast():
-            image_features, text_features, logit_scale = model(images, texts)
-            total_loss, acc = clip_loss_funcation(image_features, text_features, logit_scale)
+            if args.siglip:
+                image_features, text_features, logit_scale, logit_bias = model(images, texts)
+                total_loss = clip_loss_funcation(image_features, text_features, logit_scale, logit_bias)
+            else:
+                image_features, text_features, logit_scale = model(images, texts)
+                total_loss, acc = clip_loss_funcation(image_features, text_features, logit_scale)
             # if args.sparc_loss:
             #     sparc_loss = sparc_loss_funcation(image_features_local, text_features_local, attn_mask, logit_scale)
             #     total_loss = 1 * clip_loss + 0.5 * sparc_loss
@@ -292,7 +303,10 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     device = torch.device(args.device)
     model.eval()
 
-    zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
+    if args.flickr30k:
+        zero_shot_metrics = zero_shot_retrieval_eval(model, data, epoch, args)
+    else:
+        zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
     metrics.update(zero_shot_metrics)
 
     autocast = get_autocast(args.precision)

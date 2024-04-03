@@ -1,11 +1,12 @@
-export CUDA_VISIBLE_DEVICES=3,4,5,6
+export CUDA_VISIBLE_DEVICES=6,7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
 MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
-PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
-PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
-PRETRAINED_TEXT_MODEL=other
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
+# PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
+# PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
+# PRETRAINED_TEXT_MODEL=other
+PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_26/eva_clip_l_e4.bin
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -27,7 +28,11 @@ VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 # python -m torch.distributed.launch --nproc_per_node=8 \
 #        	--nnodes=$WORLD_SIZE --node_rank=$RANK \
 # 	--master_addr=$MASTER_ADDR --master_port=12355 --use_env \
-torchrun --nproc_per_node=4 --nnodes=1 \
+        # --pretrained-image=${PRETRAINED_IMAGE} \
+        # --pretrained-text=${PRETRAINED_TEXT} \
+        # --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
+        # --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
+torchrun --nproc_per_node=2 --nnodes=1 \
     training/main.py \
         --save-frequency 10 \
         --zeroshot-frequency 1 \
@@ -40,7 +45,7 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --dataset-type-list="webdataset;webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=256 \
+        --batch-size=550 \
         --epochs=50 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
@@ -55,10 +60,7 @@ torchrun --nproc_per_node=4 --nnodes=1 \
         --smoothing=0. \
         --workers=8 \
         --model=${MODEL} \
-        --pretrained-image=${PRETRAINED_IMAGE} \
-        --pretrained-text=${PRETRAINED_TEXT} \
-        --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
-        --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
+        --pretrained=${PRETRAINED} \
         --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
         --seed 4096 \
         --gather-with-grad \

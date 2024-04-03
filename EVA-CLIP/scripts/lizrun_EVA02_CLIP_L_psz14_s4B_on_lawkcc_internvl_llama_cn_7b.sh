@@ -68,11 +68,10 @@ fi
 ###############################################################################################################################
 
 MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
-# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_L_psz14.pt
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/logs/eva_clip_l_14/eva02_internvit_e20.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
-# PRETRAINED_VISUAL_MODEL=EVA02-L-14
-PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
+PRETRAINED_VISUAL_MODEL=EVA02-L-14
 PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
@@ -92,10 +91,7 @@ PRETRAINED_TEXT_MODEL=other
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_1200m/{00000..00127}.tar"
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
 # MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit/00000/{00000..00132}.tar"
-MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
-# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption"
-# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
-# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
+MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \
@@ -110,7 +106,7 @@ torchrun --nnodes=${WORLD_SIZE} \
   --rdzv_backend=c10d \
   --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
-        --save-frequency 10 \
+        --save-frequency 4 \
         --zeroshot-frequency 1 \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
@@ -121,7 +117,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=1092 \
+        --batch-size=700 \
         --epochs=100 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
@@ -151,4 +147,3 @@ torchrun --nnodes=${WORLD_SIZE} \
         --zero-stage=1 \
         --enable-deepspeed \
         --language="cn" \
-        --lock-text \

@@ -95,8 +95,6 @@ def zero_shot_eval(model, data, epoch, args):
 
     logging.info('Starting zero-shot imagenet.')
 
-    # logging.info('Building zero-shot classifier')
-
     dataset_name = "imagenet1k"
     current_folder = os.path.join(os.path.dirname(__file__), 'datasets')
     language_list = ["en", "cn"]

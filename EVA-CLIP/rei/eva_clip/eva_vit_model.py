@@ -533,5 +533,6 @@ class EVAVisionTransformer(nn.Module):
         if return_all_features:
             return self.forward_features(x, return_all_features)
         x = self.forward_features(x)
+        # print(x)
         x = self.head(x)
         return x

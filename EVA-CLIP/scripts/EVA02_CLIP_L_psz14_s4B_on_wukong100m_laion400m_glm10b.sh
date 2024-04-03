@@ -1,12 +1,10 @@
 export CUDA_VISIBLE_DEVICES=6,7
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
-MODEL=EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B
-# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/logs/eva_clip_l_14/eva02_internvit_e20.bin
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin
-PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
-# PRETRAINED_VISUAL_MODEL=EVA02-L-14
-PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
+MODEL=EVA02-CLIP-L-14-GLM-10B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-02/asuka/logs/eva_clip_l_14/eva02_internvit_e20.bin
+PRETRAINED_TEXT=''
+PRETRAINED_VISUAL_MODEL=EVA02-L-14
 PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py

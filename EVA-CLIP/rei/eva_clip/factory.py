@@ -229,6 +229,7 @@ def create_model(
         pretrained_text_model: str = None,
         cache_dir: Optional[str] = None,
         skip_list: list  = [],
+        **model_kwargs,
 ):
 
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
@@ -269,7 +270,7 @@ def create_model(
         cast_dtype = get_cast_dtype(precision)
         custom_clip = model_cfg.pop('custom_text', False) or force_custom_clip or ('hf_model_name' in model_cfg['text_cfg'])
 
-
+        model_cfg = dict(model_cfg, **model_kwargs)  # merge cfg dict w/ kwargs (kwargs overrides cfg)
         if custom_clip:
             if 'hf_model_name' in model_cfg.get('text_cfg', {}):
                 model_cfg['text_cfg']['hf_model_pretrained'] = pretrained_hf
@@ -379,6 +380,7 @@ def create_model_and_transforms(
         image_std: Optional[Tuple[float, ...]] = None,
         cache_dir: Optional[str] = None,
         skip_list: list = [],
+        **model_kwargs,
 ):
     model = create_model(
         model_name,
@@ -396,6 +398,7 @@ def create_model_and_transforms(
         pretrained_text_model=pretrained_text_model,
         cache_dir=cache_dir,
         skip_list=skip_list,
+        **model_kwargs,
     )
 
     image_mean = image_mean or getattr(model.visual, 'image_mean', None)

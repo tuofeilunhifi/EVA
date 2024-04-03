@@ -13,6 +13,7 @@ import tarfile
 import zipfile
 import glob
 import ijson
+import re
 
 # import braceexpand
 import numpy as np
@@ -26,6 +27,7 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, IterableD
 from torch.utils.data.distributed import DistributedSampler
 from webdataset.filters import _shuffle
 from webdataset.tariterators import base_plus_ext, url_opener, tar_file_expander, valid_sample
+from flickr import Flickr
 
 from .distributed import is_master
 
@@ -167,6 +169,49 @@ def get_imagenet(args, preprocess_fns, split):
         sampler = SubsetRandomSampler(np.where(idxs)[0])
     else:
         sampler = None
+
+    dataloader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        num_workers=args.workers,
+        sampler=sampler,
+    )
+
+    return DataInfo(dataloader=dataloader, sampler=sampler)
+
+def process_single_caption(caption, max_words=50):
+    caption = re.sub(r"([.!\"()*#:;~])", ' ', caption.lower())
+    caption = re.sub(r'\s{2,}', ' ', caption)
+    caption = caption.rstrip('\n')
+    caption = caption.strip(' ')
+
+    # truncate caption
+    caption_words = caption.split(' ')
+    if len(caption_words) > max_words:
+        caption = ' '.join(caption_words[: max_words])
+    return caption
+
+def pre_caption(caption, max_words=50):
+    if type(caption) == str:
+        caption = process_single_caption(caption, max_words)
+    else:
+        caption = [process_single_caption(c, max_words) for c in caption]
+    return caption
+
+def get_flickr(args, preprocess_fns, split):
+    assert split in ["30k"]
+    preprocess_train, preprocess_val = preprocess_fns
+
+    if split == "30k":
+        root = args.flickr30k
+        if args.language == "en":
+            ann_file = os.path.join(args.flickr30k, "flickr30k_test_karpathy.txt")
+        else:
+            ann_file = os.path.join(args.flickr30k, "flickr30k_cn_test.txt")
+        dataset = Flickr(root=root, ann_file=ann_file, transform=preprocess_val,
+                           target_transform=pre_caption)
+
+    sampler = None
 
     dataloader = torch.utils.data.DataLoader(
         dataset,
@@ -727,6 +772,9 @@ def get_data(args, preprocess_fns, epoch=0, tokenizer=None):
     if args.val_data:
         data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
             args, preprocess_val, is_train=False, tokenizer=tokenizer)
+
+    if args.flickr30k is not None:
+        data["flickr30k"] = get_flickr(args, preprocess_fns, "30k")
 
     if args.imagenet_val is not None:
         data["imagenet-val"] = get_imagenet(args, preprocess_fns, "val")

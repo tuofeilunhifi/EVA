@@ -95,6 +95,9 @@ def image_transform(
                 Resize(image_size, interpolation=InterpolationMode.BICUBIC),
                 CenterCrop(image_size),
             ]
+            # transforms = [
+            #     Resize((image_size, image_size), interpolation=InterpolationMode.BICUBIC),
+            # ]
         transforms.extend([
             _convert_to_rgb,
             ToTensor(),

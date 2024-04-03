@@ -41,8 +41,8 @@ pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation -
 
 pip install xformers==0.0.22 --index-url https://download.pytorch.org/whl/cu118 -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-# cp -r /mnt/pfs-guan-ssai/cv/cjy/envs/adt ./
-# sudo ./adt --token 1852d6b5acf8a1b50a88ac75c3a95136 mountbos
+cp -r /mnt/pfs-guan-ssai/cv/cjy/envs/adt ./
+sudo ./adt --token 1852d6b5acf8a1b50a88ac75c3a95136 mountbos
 
 # cd /mnt/pfs-guan-ssai/cv/cjy/envs/
 # pip install xformers-0.0.22.post7+cu118-cp310-cp310-manylinux2014_x86_64.whl
@@ -68,7 +68,11 @@ fi
 ###############################################################################################################################
 
 MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_23/eva_clip_l_e10.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_24/eva_clip_l_e12.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_26/eva_clip_l_e8.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 PRETRAINED_TEXT_MODEL=other
@@ -87,7 +91,11 @@ PRETRAINED_TEXT_MODEL=other
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/subsets-16/wukong-100m-part-0.json
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
-MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/" #laion1.2b + wukong100m + cc3m + cc12m
+# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/" #laion1.2b + wukong100m + cc3m + cc12m
+MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
@@ -114,7 +122,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=800 \
+        --batch-size=480 \
         --epochs=50 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
