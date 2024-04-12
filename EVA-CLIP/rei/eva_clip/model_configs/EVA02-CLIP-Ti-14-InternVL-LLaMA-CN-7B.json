@@ -8,14 +8,14 @@
         "head_width": 64,
         "mlp_ratio": 2.6667,
         "patch_size": 14,
-        "eva_model_name": "eva-clip-s-14",
+        "eva_model_name": "eva-clip-ti-14",
         "xattn": true,
         "fusedLN": true,
         "rope": true,
         "pt_hw_seq_len": 16,
         "intp_freq": true,
-        "naiveswiglu": true,
-        "subln": true
+        "naiveswiglu": false,
+        "subln": false
     },
     "text_cfg": {
         "internvl_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/chinese_alpaca_lora_7b",

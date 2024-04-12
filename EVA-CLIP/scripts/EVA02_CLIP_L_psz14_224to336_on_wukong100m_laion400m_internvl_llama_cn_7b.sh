@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=6,7
+export CUDA_VISIBLE_DEVICES=0
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
 MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
@@ -6,7 +6,11 @@ MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
 # PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 # PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 # PRETRAINED_TEXT_MODEL=other
-PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_26/eva_clip_l_e4.bin
+# PRETRAINED=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_26/eva_clip_l_e4.bin
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_CLIP_L_psz14_224to336.pt
+PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
+PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
+PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -32,7 +36,7 @@ VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
         # --pretrained-text=${PRETRAINED_TEXT} \
         # --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         # --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-torchrun --nproc_per_node=2 --nnodes=1 \
+torchrun --nproc_per_node=1 --nnodes=1 \
     training/main.py \
         --save-frequency 10 \
         --zeroshot-frequency 1 \
@@ -45,7 +49,7 @@ torchrun --nproc_per_node=2 --nnodes=1 \
         --dataset-type-list="webdataset;webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=550 \
+        --batch-size=854 \
         --epochs=50 \
         --lr=5e-4 \
         --visual-lr=4e-4 \

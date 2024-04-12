@@ -22,6 +22,8 @@ def get_num_layer_for_transformer(param_name, num_max_layer):
         "cls_token", 
         "mask_token", 
         "conv1",
+        "class_embedding",
+        "ln_pre",
         "positional_embedding",
         "token_embedding",
         "transformer.embeddings.word_embeddings",
@@ -39,10 +41,16 @@ def get_num_layer_for_transformer(param_name, num_max_layer):
     #huggingface->text.transformer.encoder.layer
     layer_regex = re.compile(r"layers\.([0-9]+)\.") 
     match_layer = layer_regex.search(param_name)
+
+    network_regex = re.compile(r"network\.([0-9]+)\.") 
+    match_network = network_regex.search(param_name)
+
     if match_block is not None:
         return int(match_block.group(1)) + 1
     elif match_layer is not None:
         return int(match_layer.group(1)) + 1
+    elif match_network is not None:
+        return int(match_network.group(1)) + 1
     else:
         return num_max_layer - 1
 

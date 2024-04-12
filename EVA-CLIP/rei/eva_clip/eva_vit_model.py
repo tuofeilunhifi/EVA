@@ -494,6 +494,9 @@ class EVAVisionTransformer(nn.Module):
 
     def forward_features(self, x, return_all_features=False):
         
+        # if self.grad_checkpointing:
+        #     x = checkpoint(self.patch_embed, x)
+        # else:
         x = self.patch_embed(x)
         batch_size, seq_len, _ = x.size()
 

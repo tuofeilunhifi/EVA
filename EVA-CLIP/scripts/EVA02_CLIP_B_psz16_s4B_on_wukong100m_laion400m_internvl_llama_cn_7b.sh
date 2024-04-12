@@ -1,12 +1,30 @@
 export CUDA_VISIBLE_DEVICES=2
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
-# MODEL=EVA02-CLIP-S-14-InternVL-LLaMA-CN-7B
-MODEL=EVA02-CLIP-Ti-14-InternVL-LLaMA-CN-7B
-PRETRAINED_IMAGE='/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_p14.pt'
+MODEL=EVA02-CLIP-B-16-InternVL-LLaMA-CN-7B
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_11/eva_clip_b_224_e10.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
-PRETRAINED_VISUAL_MODEL=EVA02-L-14
+PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 PRETRAINED_TEXT_MODEL=other
+# MODEL=EVA02-CLIP-S-14-InternVL-LLaMA-CN-7B
+# MODEL=EVA02-CLIP-B-16-InternVL-LLaMA-CN-7B
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_B_psz14to16.pt
+# PRETRAINED_VISUAL_MODEL=EVA02-L-14
+# MODEL=Mobile-CLIP-S2
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mobileclip/mobileclip_s2.pt
+# MODEL=Mobile-CLIP-S1
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mobileclip/mobileclip_s1.pt
+# MODEL=Mobile-CLIP-S0
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mobileclip/mobileclip_s0.pt
+# MODEL=CLIP-B-16-InternVL-LLaMA-CN-7B
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/clip/ViT-B-16.pt
+# MODEL=CLIP-L-14-InternVL-LLaMA-CN-7B
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/clip/ViT-L-14.pt
+# MODEL=CLIP-L-14-336-InternVL-LLaMA-CN-7B
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/clip/ViT-L-14-336px.pt
+# PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
+# PRETRAINED_VISUAL_MODEL=openai
+# PRETRAINED_TEXT_MODEL=other
 
 # can automaticaly download and load pretrained models by follwing 4 lines; please check details in pretrained.py
 # PRETRAINED_IMAGE=eva
@@ -41,7 +59,7 @@ torchrun --nproc_per_node=1 --nnodes=1 \
         --dataset-type-list="webdataset;webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=2048 \
+        --batch-size=512 \
         --epochs=200 \
         --lr=5e-4 \
         --visual-lr=2e-4 \
@@ -60,7 +78,7 @@ torchrun --nproc_per_node=1 --nnodes=1 \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
+        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale image_encoder.model.head.proj visual.proj \
         --seed 4096 \
         --gather-with-grad \
         --grad-checkpointing \

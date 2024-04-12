@@ -98,7 +98,7 @@ def load_state_dict(checkpoint_path: str, map_location: str='cpu', model_key: st
                 state_dict = checkpoint
         if next(iter(state_dict.items()))[0].startswith('module'):
             state_dict = {k[7:]: v for k, v in state_dict.items()}
-    
+
     for k in skip_list:
         if k in list(state_dict.keys()):
             logging.info(f"Removing key {k} from pretrained checkpoint")
@@ -108,6 +108,15 @@ def load_state_dict(checkpoint_path: str, map_location: str='cpu', model_key: st
         for k in list(state_dict.keys()):
             if 'freqs_cos' in k or 'freqs_sin' in k:
                 del state_dict[k]
+
+    # key_map = {"mlp.w12": "mlp.fc1", "mlp.w3": "mlp.fc2"}
+    # # key_map = {"mlp.w3": "mlp.fc2"}
+    # for k in list(state_dict.keys()):
+    #     for s in list(key_map.keys()):
+    #         if s in k:
+    #             new_k = k.replace(s, key_map[s])
+    #             state_dict[new_k] = state_dict[k]
+    #             del state_dict[k]
     return state_dict
 
 
@@ -146,6 +155,19 @@ def load_clip_visual_state_dict(checkpoint_path: str, map_location: str='cpu', i
             del state_dict[k]
     return state_dict
 
+def load_mci_visual_state_dict(checkpoint_path: str, map_location: str='cpu', is_openai: bool=False, skip_list:list=[]):
+    state_dict = load_state_dict(checkpoint_path, map_location=map_location, is_openai=is_openai, skip_list=skip_list)
+
+    for k in list(state_dict.keys()):
+        if not k.startswith('image_encoder.'):
+            del state_dict[k]
+    for k in list(state_dict.keys()):
+        if k.startswith('image_encoder.'):
+            new_k = k[14:]
+            state_dict[new_k] = state_dict[k]
+            del state_dict[k]
+    return state_dict
+
 def load_clip_text_state_dict(checkpoint_path: str, map_location: str='cpu', is_openai: bool=False, skip_list:list=[]):
     state_dict = load_state_dict(checkpoint_path, map_location=map_location, is_openai=is_openai, skip_list=skip_list)
 
@@ -162,6 +184,8 @@ def get_pretrained_tag(pretrained_model):
         return "clip"
     elif "eva" in pretrained_model and "clip" in pretrained_model:
         return "eva_clip"
+    elif "mci" in pretrained_model:
+        return "mci"
     else:
         return "other"
 
@@ -184,6 +208,8 @@ def load_pretrained_checkpoint(
             visual_state_dict = load_clip_visual_state_dict(visual_checkpoint_path, is_openai=False, skip_list=skip_list)
         elif visual_tag == "clip":
             visual_state_dict = load_clip_visual_state_dict(visual_checkpoint_path, is_openai=True, skip_list=skip_list)
+        elif visual_tag == "mci":
+            visual_state_dict = load_mci_visual_state_dict(visual_checkpoint_path, is_openai=False, skip_list=skip_list)
         else:
             visual_state_dict = load_state_dict(visual_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
     

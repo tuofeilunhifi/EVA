@@ -17,7 +17,8 @@ from eva_clip import create_model_and_transforms, get_tokenizer
 
 def benchmark_model(model_name, benchmark_dir, device = "cpu"):
     # model, preprocess = load(model_name, device=device)
-    model_name="EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B"
+    # model_name="EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B"
+    model_name="EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B"
     pretrained=''
     precision='amp'
     device='cuda:0'
@@ -25,7 +26,10 @@ def benchmark_model(model_name, benchmark_dir, device = "cpu"):
     force_quick_gelu=False
     force_custom_clip=True
     force_patch_dropout=None
-    pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin"
+    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin"
+    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_03/eva_clip_l_224_e40.bin"
+    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_05/eva_clip_l_336_e10.bin"
+    pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_22/eva_clip_l_336_e4.bin"
     pretrained_text="/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth"
     pretrained_visual_model="EVA02-CLIP-L-14"
     pretrained_text_model="other"
@@ -124,7 +128,7 @@ def benchmark_model(model_name, benchmark_dir, device = "cpu"):
 
                 probs1 = (100.0 * text_features1 @ image_features1.T).softmax(dim=-1)
                 probs2 = (100.0 * text_features2 @ image_features2.T).softmax(dim=-1)
-                # print(probs1, probs2)
+                print(probs1, probs2)
 
             img1_score1 = probs1[0][0]
             img1_score2 = probs2[0][0]

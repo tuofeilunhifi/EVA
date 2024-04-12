@@ -2,20 +2,7 @@
     "embed_dim": 768,
     "vision_cfg": {
         "image_size": 224,
-        "layers": 12,
-        "width": 384,
-        "drop_path_rate": 0,
-        "head_width": 64,
-        "mlp_ratio": 2.6667,
-        "patch_size": 14,
-        "eva_model_name": "eva-clip-s-14",
-        "xattn": true,
-        "fusedLN": true,
-        "rope": true,
-        "pt_hw_seq_len": 16,
-        "intp_freq": true,
-        "naiveswiglu": false,
-        "subln": false
+        "mci_model_name": "mci2"
     },
     "text_cfg": {
         "internvl_model_name": "/mnt/pfs-guan-ssai/cv/cjy/models/chinese_alpaca_lora_7b",

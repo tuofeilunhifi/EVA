@@ -21,6 +21,7 @@ from .timm_model import TimmModel
 from .eva_vit_model import EVAVisionTransformer
 from .transformer import LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer
 from .internvl_model import InternVLLLaMA
+from .mobileclip.image_encoder import MCi
 
 try:
     from apex.normalization import FusedLayerNorm
@@ -61,6 +62,8 @@ class CLIPVisionCfg:
     intp_freq: bool = False
     naiveswiglu: bool = False
     subln: bool = False
+
+    mci_model_name: bool = None
 
 
 @dataclass
@@ -132,6 +135,12 @@ def _build_vision_tower(
             intp_freq= vision_cfg.intp_freq,
             naiveswiglu= vision_cfg.naiveswiglu,
             subln= vision_cfg.subln
+        )
+    elif vision_cfg.mci_model_name:
+        visual = MCi(
+            model_name=vision_cfg.mci_model_name,
+            img_size=vision_cfg.image_size,
+            projection_dim=embed_dim,
         )
     elif vision_cfg.timm_model_name:
         visual = TimmModel(

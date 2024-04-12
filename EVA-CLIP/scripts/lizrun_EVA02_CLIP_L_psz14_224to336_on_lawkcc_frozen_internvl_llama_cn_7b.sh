@@ -69,10 +69,12 @@ fi
 
 MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_03/eva_clip_l_224_e40.bin
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_23/eva_clip_l_e10.bin
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_24/eva_clip_l_e12.bin
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_26/eva_clip_l_e8.bin
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_CLIP_L_psz14_224to336.pt
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 PRETRAINED_TEXT_MODEL=other
@@ -92,7 +94,8 @@ PRETRAINED_TEXT_MODEL=other
 # WUKONG_100M_DATA_PATH=/mnt/pfs-guan-ssai/cv/yanghongfu/VL_pretrain/zh/zh_annotation/wukong/original/putput_wukong_100m_0.json
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/" #laion1.2b + wukong100m + cc3m + cc12m
-MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
+MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit-add;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
 # MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption"
 # MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
 # MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
@@ -111,18 +114,18 @@ torchrun --nnodes=${WORLD_SIZE} \
   --rdzv_backend=c10d \
   --rdzv_endpoint=${MASTER_IP}:${MASTER_PORT} \
     training/main.py \
-        --save-frequency 2 \
+        --save-frequency 10 \
         --zeroshot-frequency 1 \
         --report-to="wandb, tensorboard" \
         --wandb-project-name="eva-clip" \
-        --wandb-notes="eva02_clip_L_14" \
+        --wandb-notes="eva02_clip_L_14_336" \
         --train-num-samples 40000000 \
         --dataset-resampled \
         --train-data=${MERGE_500M_DATA_PATH} \
         --dataset-type="webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=480 \
+        --batch-size=854 \
         --epochs=50 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
@@ -141,7 +144,7 @@ torchrun --nnodes=${WORLD_SIZE} \
         --pretrained-text=${PRETRAINED_TEXT} \
         --pretrained-visual-model=${PRETRAINED_VISUAL_MODEL} \
         --pretrained-text-model=${PRETRAINED_TEXT_MODEL} \
-        --skip-list head.weight head.bias lm_head.weight lm_head.bias mask_token logit_scale \
+        --skip-list lm_head.weight lm_head.bias mask_token logit_scale \
         --seed 4096 \
         --gather-with-grad \
         --grad-checkpointing \

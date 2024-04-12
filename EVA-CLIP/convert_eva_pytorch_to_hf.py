@@ -198,4 +198,4 @@ if __name__ == "__main__":
 
     convert_evaclip_checkpoint(args.checkpoint_path, args.pytorch_dump_folder_path, args.config_path, args.image_path, args.save, args.resize)
 
-    # python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/ --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_19/eva_clip_l_336_e4.bin --config_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/ --image_path torch_to_hf/CLIP.png --save True --resize 336
+    # python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/eva02_clip_l_336/ --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_19/eva_clip_l_336_e4.bin --config_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/eva02_clip_l_336/ --image_path eva02_clip_l_336/CLIP.png --save True --resize 336

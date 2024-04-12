@@ -26,8 +26,11 @@ inputs = processor(images=image, return_tensors="pt").to(device)
 
 
 pytorch_dump_folder_path = "/mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/"
+# pytorch_dump_folder_path = "/mnt/pfs-guan-ssai/cv/yanghongfu/.cache/clip-vit-large-patch14-336"
 hf_config = AutoConfig.from_pretrained(pytorch_dump_folder_path, trust_remote_code=True)
 hf_model = AutoModel.from_pretrained(pytorch_dump_folder_path, config=hf_config, trust_remote_code=True, ignore_mismatched_sizes=True).to(device)
+# print(inputs)
+# print(hf_model)
 
 # position_embedding_weight = resample_abs_pos_embed(
 #     hf_model.vision_model.embeddings.position_embedding.weight.unsqueeze(0),
