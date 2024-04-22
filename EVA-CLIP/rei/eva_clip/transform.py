@@ -5,9 +5,53 @@ import torch.nn as nn
 import torchvision.transforms.functional as F
 
 from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, \
-    CenterCrop
+    CenterCrop, RandomHorizontalFlip, RandomApply, ColorJitter, RandomGrayscale, ToPILImage
 
 from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
+
+from timm.data.auto_augment import rand_augment_transform
+import numpy as np
+
+class GaussianBlur(object):
+    """blur a single image on CPU"""
+    def __init__(self, kernel_size):
+        radias = kernel_size // 2
+        kernel_size = radias * 2 + 1
+        self.blur_h = nn.Conv2d(3, 3, kernel_size=(kernel_size, 1),
+                                stride=1, padding=0, bias=False, groups=3)
+        self.blur_v = nn.Conv2d(3, 3, kernel_size=(1, kernel_size),
+                                stride=1, padding=0, bias=False, groups=3)
+        self.k = kernel_size
+        self.r = radias
+
+        self.blur = nn.Sequential(
+            nn.ReflectionPad2d(radias),
+            self.blur_h,
+            self.blur_v
+        )
+
+        self.pil_to_tensor = ToTensor()
+        self.tensor_to_pil = ToPILImage()
+
+    def __call__(self, img):
+        img = self.pil_to_tensor(img).unsqueeze(0)
+
+        sigma = np.random.uniform(0.1, 2.0)
+        x = np.arange(-self.r, self.r + 1)
+        x = np.exp(-np.power(x, 2) / (2 * sigma * sigma))
+        x = x / x.sum()
+        x = torch.from_numpy(x).view(1, -1).repeat(3, 1)
+
+        self.blur_h.weight.data.copy_(x.view(3, 1, self.k, 1))
+        self.blur_v.weight.data.copy_(x.view(3, 1, 1, self.k))
+
+        with torch.no_grad():
+            img = self.blur(img)
+            img = img.squeeze()
+
+        img = self.tensor_to_pil(img)
+
+        return img
 
 
 class ResizeMaxSize(nn.Module):
@@ -79,8 +123,30 @@ def image_transform(
 
     normalize = Normalize(mean=mean, std=std)
     if is_train:
+        if isinstance(image_size, (tuple, list)):
+            img_size_min = min(image_size)
+        else:
+            img_size_min = image_size
+
+        ra_params = dict(
+            translate_const=int(img_size_min * 0.45),
+            img_mean=tuple([min(255, round(255 * x)) for x in mean]),
+        )
+
         return Compose([
             RandomResizedCrop(image_size, scale=(0.9, 1.0), interpolation=InterpolationMode.BICUBIC),
+            
+            #############################################################
+            # RandomHorizontalFlip(),
+            RandomApply([
+                ColorJitter(0.8, 0.8, 0.8, 0.2)
+            ], p=0.8),
+            RandomApply([GaussianBlur(22)], p=0.5),
+            rand_augment_transform('rand-n{}-m{}-mstd0.5'.format(2, 10),
+                                   ra_params),
+            RandomGrayscale(p=0.2),
+            ##############################################################
+
             _convert_to_rgb,
             ToTensor(),
             normalize,
@@ -95,9 +161,6 @@ def image_transform(
                 Resize(image_size, interpolation=InterpolationMode.BICUBIC),
                 CenterCrop(image_size),
             ]
-            # transforms = [
-            #     Resize((image_size, image_size), interpolation=InterpolationMode.BICUBIC),
-            # ]
         transforms.extend([
             _convert_to_rgb,
             ToTensor(),

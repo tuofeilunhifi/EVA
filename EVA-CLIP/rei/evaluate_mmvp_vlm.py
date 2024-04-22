@@ -13,12 +13,13 @@ import csv
 
 from eva_clip import create_model_and_transforms, get_tokenizer
 
-# python evaluate_mmvp_vlm.py --directory /mnt/pfs-guan-ssai/cv/cjy/data/MMVP_VLM
+#CUDA_VISIBLE_DEVICES=7 python evaluate_mmvp_vlm.py --directory /mnt/pfs-guan-ssai/cv/cjy/data/MMVP_VLM
 
 def benchmark_model(model_name, benchmark_dir, device = "cpu"):
     # model, preprocess = load(model_name, device=device)
     # model_name="EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B"
     model_name="EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B"
+    # model_name="CLIP-L-14-336-InternVL-LLaMA-CN-7B"
     pretrained=''
     precision='amp'
     device='cuda:0'
@@ -26,10 +27,12 @@ def benchmark_model(model_name, benchmark_dir, device = "cpu"):
     force_quick_gelu=False
     force_custom_clip=True
     force_patch_dropout=None
-    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_01/eva_clip_l_e20.bin"
+    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_14/eva_clip_l_336_e10.bin"
     # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_03/eva_clip_l_224_e40.bin"
     # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_05/eva_clip_l_336_e10.bin"
-    pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_22/eva_clip_l_336_e4.bin"
+    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_22/eva_clip_l_336_e4.bin"
+    # pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_15/clip_l_336_e10.bin"
+    pretrained_image="/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_21/eva_clip_l_336_e6.bin"
     pretrained_text="/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth"
     pretrained_visual_model="EVA02-CLIP-L-14"
     pretrained_text_model="other"

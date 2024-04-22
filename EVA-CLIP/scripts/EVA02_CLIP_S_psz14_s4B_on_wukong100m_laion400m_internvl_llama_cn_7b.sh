@@ -1,9 +1,10 @@
 export CUDA_VISIBLE_DEVICES=2
 cd /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/rei/
 
-# MODEL=EVA02-CLIP-S-14-InternVL-LLaMA-CN-7B
-MODEL=EVA02-CLIP-Ti-14-InternVL-LLaMA-CN-7B
-PRETRAINED_IMAGE='/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_p14.pt'
+# MODEL=EVA02-CLIP-Ti-14-InternVL-LLaMA-CN-7B
+# PRETRAINED_IMAGE='/mnt/pfs-guan-ssai/cv/cjy/models/eva02_Ti_pt_in21k_p14.pt'
+MODEL=EVA02-CLIP-S-14-InternVL-LLaMA-CN-7B
+PRETRAINED_IMAGE='/mnt/pfs-guan-ssai/cv/cjy/models/eva02_S_pt_in21k_p14.pt'
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-L-14
 PRETRAINED_TEXT_MODEL=other

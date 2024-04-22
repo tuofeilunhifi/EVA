@@ -632,6 +632,7 @@ class VisionTransformer(nn.Module):
                 x = x[:, 0]
 
             x = self.ln_post(x)
+            # print(x)
 
             if self.proj is not None:
                 x = x @ self.proj

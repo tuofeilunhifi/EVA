@@ -6,8 +6,12 @@ from transformers import  CLIPImageProcessor
 
 # model_name = "EVA02-CLIP-L-14-InternVL-LLaMA-CN-7B" 
 # pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_06/eva_clip_l_e10.bin" # or "/path/to/EVA02_CLIP_B_psz16_s8B.pt"
-model_name = "EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B" 
-pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_22/eva_clip_l_336_e4.bin"
+# model_name = "EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B" 
+# pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_14/eva_clip_l_336_e10.bin"
+
+model_name = "CLIP-L-14-336-InternVL-LLaMA-CN-7B" 
+pretrained = "/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_15/clip_l_336_e10.bin"
+
 
 image_path = "CLIP.png"
 caption = ["a diagram", "a dog", "a cat"]

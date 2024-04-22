@@ -22,35 +22,35 @@ import torch
 from PIL import Image
 from transformers import AutoModel, AutoConfig
 from transformers import  CLIPImageProcessor, pipeline, CLIPTokenizer
-from torch_to_hf.configuration_evaclip import EvaCLIPConfig, EvaCLIPVisionConfig
-from torch_to_hf.modeling_eva import EvaCLIPModel, EvaCLIPVisionModel, EvaCLIPVisionModelWithProjection
+from clip_torch_to_hf.configuration_clip import MYCLIPVisionConfig
+from clip_torch_to_hf.modeling_clip import MYCLIPVisionModel, MYCLIPVisionModelWithProjection
 
 
 KEYS_TO_MODIFY_MAPPING = {
-    "cls_token":"embeddings.class_embedding",
-    "pos_embed":"embeddings.position_embedding.weight",
-    "patch_embed.proj":"embeddings.patch_embedding",
-    ".positional_embedding":".embeddings.position_embedding.weight",
-    ".token_embedding":".embeddings.token_embedding",
-    "text.text_projection":"text_projection.weight",
-    "mlp.c_fc":"mlp.fc1",
-    "mlp.c_proj":"mlp.fc2",
-    ".proj.":".out_proj.",
+    # "cls_token":"embeddings.class_embedding",
+    # "pos_embed":"embeddings.position_embedding.weight",
+    # "patch_embed.proj":"embeddings.patch_embedding",
+    # ".positional_embedding":".embeddings.position_embedding.weight",
+    # ".token_embedding":".embeddings.token_embedding",
+    # "text.text_projection":"text_projection.weight",
+    # "mlp.c_fc":"mlp.fc1",
+    # "mlp.c_proj":"mlp.fc2",
+    # ".proj.":".out_proj.",
     # "q_bias":"q_proj.bias",
     # "v_bias":"v_proj.bias",
-    "out.":"out_proj.",
-    "norm1":"layer_norm1",
-    "norm2":"layer_norm2",
-    "ln_1":"layer_norm1",
-    "ln_2":"layer_norm2",
-    "attn":"self_attn",
-    "norm.":"post_layernorm.",
-    "ln_final":"final_layer_norm",
-    "visual.blocks":"vision_model.encoder.layers",
-    "text.transformer.resblocks":"text_model.encoder.layers",
-    "visual.head":"visual_projection",
+    # "out.":"out_proj.",
+    # "norm1":"layer_norm1",
+    # "norm2":"layer_norm2",
+    # "ln_1":"layer_norm1",
+    # "ln_2":"layer_norm2",
+    # "attn":"self_attn",
+    # "norm.":"post_layernorm.",
+    # "ln_final":"final_layer_norm",
+    # "visual.blocks":"vision_model.encoder.layers",
+    # "text.transformer.resblocks":"text_model.encoder.layers",
+    # "visual.head":"visual_projection",
     "visual.":"vision_model.",
-    "text.":"text_model.",
+    # "text.":"text_model.",
 
 }
 
@@ -62,22 +62,22 @@ def rename_state_dict(state_dict):
         for key_to_modify, new_key in KEYS_TO_MODIFY_MAPPING.items():
             if key_to_modify in key:
                 key = key.replace(key_to_modify, new_key)
-        if "text_projection" in key:
-            model_state_dict[key] = value.T
-        elif "attn.qkv" in key:
-            # split qkv into query key and value
-            mixed_qkv = value
-            qkv_dim = mixed_qkv.size(0) // 3
+        # if "text_projection" in key:
+        #     model_state_dict[key] = value.T
+        # elif "attn.qkv" in key:
+        #     # split qkv into query key and value
+        #     mixed_qkv = value
+        #     qkv_dim = mixed_qkv.size(0) // 3
 
-            query_layer = mixed_qkv[:qkv_dim]
-            key_layer = mixed_qkv[qkv_dim : qkv_dim * 2]
-            value_layer = mixed_qkv[qkv_dim * 2 :]
+        #     query_layer = mixed_qkv[:qkv_dim]
+        #     key_layer = mixed_qkv[qkv_dim : qkv_dim * 2]
+        #     value_layer = mixed_qkv[qkv_dim * 2 :]
 
-            model_state_dict[key.replace("qkv", "q_proj")] = query_layer
-            model_state_dict[key.replace("qkv", "k_proj")] = key_layer
-            model_state_dict[key.replace("qkv", "v_proj")] = value_layer
+        #     model_state_dict[key.replace("qkv", "q_proj")] = query_layer
+        #     model_state_dict[key.replace("qkv", "k_proj")] = key_layer
+        #     model_state_dict[key.replace("qkv", "v_proj")] = value_layer
 
-        elif "attn.in_proj" in key:
+        if "attn.in_proj" in key:
             # split qkv into query key and value
             mixed_qkv = value
             qkv_dim = mixed_qkv.size(0) // 3
@@ -90,10 +90,10 @@ def rename_state_dict(state_dict):
             model_state_dict[key.replace("in_proj_", "k_proj.")] = key_layer
             model_state_dict[key.replace("in_proj_", "v_proj.")] = value_layer
 
-        elif "class_embedding" in key:
-            model_state_dict[key] = value[0,0,:]
-        elif "vision_model.embeddings.position_embedding" in key:
-            model_state_dict[key] = value[0,:,:]
+        # elif "class_embedding" in key:
+        #     model_state_dict[key] = value[0,0,:]
+        # elif "vision_model.embeddings.position_embedding" in key:
+        #     model_state_dict[key] = value[0,:,:]
 
         else:
             model_state_dict[key] = value
@@ -128,14 +128,14 @@ def check_loaded_model(pytorch_dump_folder_path, tokenizer, processor, image, ca
     hf_config = AutoConfig.from_pretrained(pytorch_dump_folder_path, trust_remote_code=True)
     hf_model = AutoModel.from_pretrained(pytorch_dump_folder_path, config=hf_config, trust_remote_code=True).to(device)
     inputs = processor(images=image, return_tensors="pt").to(device)
-    outputs = hf_model(**inputs)
+    outputs = hf_model(**inputs, output_hidden_states=True)
     print(hf_config, hf_model)
     print(outputs)
     # detector = pipeline(model=hf_model, task="zero-shot-image-classification", tokenizer = tokenizer, image_processor=processor)
     # detector_probs = detector(image, candidate_labels=captions)
     # print(f"text_probs loaded hf_model using pipeline: {detector_probs}")
 
-def convert_evaclip_checkpoint(checkpoint_path, pytorch_dump_folder_path, config_path, image_path, save=False, resize=224):
+def convert_clip_checkpoint(checkpoint_path, pytorch_dump_folder_path, config_path, image_path, save=False, resize=224):
     if resize == 224:
         processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
     else:
@@ -152,13 +152,12 @@ def convert_evaclip_checkpoint(checkpoint_path, pytorch_dump_folder_path, config
 
     # transformers_config = EvaCLIPConfig.from_pretrained(config_path)
     # hf_model = EvaCLIPModel(transformers_config)
-    transformers_config = EvaCLIPVisionConfig.from_pretrained(config_path)
-    hf_model = EvaCLIPVisionModel(transformers_config)
-    # hf_model = EvaCLIPVisionModelWithProjection(transformers_config)
+    transformers_config = MYCLIPVisionConfig.from_pretrained(config_path)
+    hf_model = MYCLIPVisionModel(transformers_config)
+    # hf_model = MYCLIPVisionModelWithProjection(transformers_config)
     pt_model_state_dict = torch.load(checkpoint_path)
     state_dict = rename_state_dict(pt_model_state_dict)
 
-    # print(hf_model, state_dict.keys())
     hf_model.load_state_dict(state_dict, strict=False)
     
     
@@ -196,6 +195,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    convert_evaclip_checkpoint(args.checkpoint_path, args.pytorch_dump_folder_path, args.config_path, args.image_path, args.save, args.resize)
+    convert_clip_checkpoint(args.checkpoint_path, args.pytorch_dump_folder_path, args.config_path, args.image_path, args.save, args.resize)
 
-    #CUDA_VISIBLE_DEVICES=7 python convert_eva_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/ --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_14/eva_clip_l_336_e10.bin --config_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/torch_to_hf/ --image_path torch_to_hf/CLIP.png --save True --resize 336
+    # CUDA_VISIBLE_DEVICES=7 python convert_clip_pytorch_to_hf.py --pytorch_dump_folder_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/clip_torch_to_hf/ --checkpoint_path /mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_15/clip_l_336_e10.bin --config_path /mnt/pfs-guan-ssai/cv/cjy/codebase/EVA/EVA-CLIP/clip_torch_to_hf/ --image_path clip_torch_to_hf/CLIP.png --save True --resize 336

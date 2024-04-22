@@ -109,14 +109,15 @@ def load_state_dict(checkpoint_path: str, map_location: str='cpu', model_key: st
             if 'freqs_cos' in k or 'freqs_sin' in k:
                 del state_dict[k]
 
-    # key_map = {"mlp.w12": "mlp.fc1", "mlp.w3": "mlp.fc2"}
-    # # key_map = {"mlp.w3": "mlp.fc2"}
-    # for k in list(state_dict.keys()):
-    #     for s in list(key_map.keys()):
-    #         if s in k:
-    #             new_k = k.replace(s, key_map[s])
-    #             state_dict[new_k] = state_dict[k]
-    #             del state_dict[k]
+    # if "blocks.0.mlp.w3.weight" in list(state_dict.keys()):
+    #     # key_map = {"mlp.w12": "mlp.fc1", "mlp.w3": "mlp.fc2"}
+    #     key_map = {"mlp.w3": "mlp.fc2"}
+    #     for k in list(state_dict.keys()):
+    #         for s in list(key_map.keys()):
+    #             if s in k:
+    #                 new_k = k.replace(s, key_map[s])
+    #                 state_dict[new_k] = state_dict[k]
+    #                 del state_dict[k]
     return state_dict
 
 
