@@ -49,7 +49,7 @@ torchrun --nproc_per_node=1 --nnodes=1 \
         --dataset-type-list="webdataset;webdataset" \
         --imagenet-val=${VAL_DATA_PATH} \
         --warmup 2000 \
-        --batch-size=854 \
+        --batch-size=64 \
         --epochs=50 \
         --lr=5e-4 \
         --visual-lr=4e-4 \
@@ -77,4 +77,4 @@ torchrun --nproc_per_node=1 --nnodes=1 \
         --enable-deepspeed \
         --language="cn" \
         --lock-text \
-        # --precision="amp_bf16" \
+        --siglip

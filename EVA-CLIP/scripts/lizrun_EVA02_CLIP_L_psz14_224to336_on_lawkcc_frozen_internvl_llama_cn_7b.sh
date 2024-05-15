@@ -19,6 +19,7 @@
 export NCCL_IB_GID_INDEX=3
 export NCCL_IB_TIMEOUT=22
 export NCCL_IB_RETRY_CNT=13
+export NCCL_IB_HCA=^mlx5_0,^mlx5_1,mlx5_2,^mlx5_3,mlx5_4,^mlx5_5,mlx5_6,^mlx5_7,mlx5_8
 # export NCCL_ASYNC_ERROR_HANDLING=1
 ### RDMA Config ###
 
@@ -74,8 +75,8 @@ MODEL=EVA02-CLIP-L-14-336-InternVL-LLaMA-CN-7B
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_23/eva_clip_l_e10.bin
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_24/eva_clip_l_e12.bin
 # PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_03_26/eva_clip_l_e8.bin
-PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_CLIP_L_psz14_224to336.pt
-# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_14/eva_clip_l_336_e10.bin
+# PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/models--QuanSun--EVA-CLIP/snapshots/11afd202f2ae80869d6cef18b1ec775e79bd8d12/EVA02_CLIP_L_psz14_224to336.pt
+PRETRAINED_IMAGE=/mnt/pfs-guan-ssai/cv/cjy/models/mindvit/2024_04_14/eva_clip_l_336_e10.bin
 PRETRAINED_TEXT='/mnt/pfs-guan-ssai/cv/cjy/models/internvl_c_13b_224px.pth'
 PRETRAINED_VISUAL_MODEL=EVA02-CLIP-L-14
 PRETRAINED_TEXT_MODEL=other
@@ -96,12 +97,10 @@ PRETRAINED_TEXT_MODEL=other
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe/{00000..00127}.tar"
 # MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/" #laion1.2b + wukong100m + cc3m + cc12m
 # MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
-MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit-add;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit-add;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m"
 # MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit-add;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/cc3m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/cc12m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/wukong/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/taisu/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/laioncn/tarfiles;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption"
-# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption"
-# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/taisufilter72m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
-# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc3m;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/cc12m;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/wklaioncnfliter119m"
-# MERGE_500M_DATA_PATH="/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/laion2b-en/recipe_laion_200m/{00000..00017}.tar;/mnt/pfs-mc0p4k/cv/team/cjy/datasets/wds/wukong/wukong-100m-part-{0..15}.tar"
+# MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit-add;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/cc3m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/cc12m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/wukong/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/taisu/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/laioncn/tarfiles;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/docstruct4m/tarfiles"
+MERGE_500M_DATA_PATH="/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/laion2b-wds-vit-add;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/cc3m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/cc12m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/wukong/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/taisu/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/laioncn/tarfiles;/mnt/spaceai-internal/ark/ark/cv/mc0p4k/panxuhao/data/zh-qwen-caption;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/docstruct4m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/sa1b/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/anyword3m/tarfiles;/mnt/pfs-mc0p4k/cv/team/panxuhao/wds_utils/synthdog/tarfiles"
 VAL_DATA_PATH=/mnt/pfs-guan-ssai/cv/rxd/data/ImageNet-1k/raw/imagenet1k/val
 
 # python -m torch.distributed.launch --nproc_per_node=8 \

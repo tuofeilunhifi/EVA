@@ -137,7 +137,7 @@ def image_transform(
             RandomResizedCrop(image_size, scale=(0.9, 1.0), interpolation=InterpolationMode.BICUBIC),
             
             #############################################################
-            # RandomHorizontalFlip(),
+            RandomHorizontalFlip(),
             RandomApply([
                 ColorJitter(0.8, 0.8, 0.8, 0.2)
             ], p=0.8),
